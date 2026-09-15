@@ -37,27 +37,24 @@ const optionalSetting = z
  */
 const serverEnvShape = z.object({
   /**
-   * Credential for the Anthropic adapter.
+   * Credential for the OpenAI models this application will call.
    *
    * @remarks
-   * Optional because `src/server/composition.ts` wires the fake adapter by
-   * default, which needs no credential at all — that is what keeps the
-   * template's promise that `pnpm dev` answers a request with nothing
-   * configured. The key stays in this schema because the Anthropic adapter is
-   * still shipped and still one line away in `src/server/composition.ts`: a
-   * deployment that switches to it supplies this variable, and the adapter
-   * reports a missing or rejected key as the port's `ERR_LLM_AUTH` on the
-   * request that needed it — a failure a caller can see and act on, which a
-   * server that refuses to boot is not.
+   * Optional because `src/server/composition.ts` wires the fake adapter, which
+   * needs no credential at all — that is what keeps `pnpm dev` answering a
+   * request with nothing configured, and what keeps every test off the
+   * network. The name is declared here ahead of the adapter that will consume
+   * it so a developer's `.env` is valid before that adapter exists; a
+   * deployment that switches to a billed adapter supplies this variable, and
+   * that adapter reports a missing or rejected key as the port's
+   * `ERR_LLM_AUTH` on the request that needed it — a failure a caller can see
+   * and act on, which a server that refuses to boot is not.
    *
-   * Its mere presence obliges nothing. A machine can have this exported for
-   * something else entirely — the fixture recording flow in
-   * `tests/ai-port.test.ts` needs it — while this application still answers
-   * from the fake adapter and bills no one. What obliges
+   * Its mere presence obliges nothing. What obliges
    * {@link serverEnvShape.API_ACCESS_KEY} is which adapter is wired, not which
    * variables happen to be set; see {@link ServerEnvRequirements}.
    */
-  ANTHROPIC_API_KEY: optionalSetting,
+  OPENAI_API_KEY: optionalSetting,
 
   /**
    * The shared secret a caller of `POST /api/ask` must present.
@@ -89,8 +86,8 @@ export interface ServerEnvRequirements {
    *
    * @remarks
    * `POST /api/ask` reaches the model call with nothing in front of it: no
-   * middleware (`src/proxy.ts`'s matcher excludes `api` outright) and no check
-   * in the handler beyond body validation. So an endpoint that costs money to
+   * proxy or middleware at all, and no check in the handler beyond body
+   * validation. So an endpoint that costs money to
    * answer must not also be open, and `true` here is what makes that
    * impossible to forget — `readServerEnv` throws, and the server stops as it
    * starts rather than serving one request unprotected.

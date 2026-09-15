@@ -13,9 +13,9 @@ description: >
 
 **Owns:** whether a change owes a documentation update, and which surface it lands on.
 **Does not own:** what a TSDoc comment for a given symbol actually says
-(`writing-typescript`); how a skill is authored and mirrored (`authoring-skills`); what
-goes into a message catalog (`localizing-ui`); the procedure behind the README's
-"Starting a new app from this template" section (`starting-an-app`).
+(`writing-typescript`); how a skill is authored and mirrored (`authoring-skills`); the
+procedure behind the README's "Starting a new app from this template" section
+(`starting-an-app`).
 
 ## Decide on observability, not location
 
@@ -82,11 +82,10 @@ going quietly.
 
 ## The checklist owns the mechanical items
 
-`.github/PULL_REQUEST_TEMPLATE.md` already carries the two items that fire most often —
-the one for a new environment variable and the one for a new UI string. Work from the
-template; this skill does not restate its items and neither should anything else.
-`localizing-ui` owns the catalog procedure behind the second of them, and AGENTS.md's
-Conventions owns the English rule and the one exception the catalogs get.
+`.github/PULL_REQUEST_TEMPLATE.md` already carries the item that fires most often — the
+one for a new environment variable. Work from the template; this skill does not restate
+its items and neither should anything else. AGENTS.md's Conventions owns the English
+rule this repository holds with no exception.
 
 ## What belongs in prose
 

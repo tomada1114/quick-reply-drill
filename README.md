@@ -6,15 +6,18 @@ A short description.
 
 ## What this is
 
-A starting point for a Next.js application on the App Router: a locale-prefixed page
-tree, one JSON endpoint, and one language-model call kept behind an interface rather
-than called directly. ESM-only TypeScript throughout.
+A Next.js application on the App Router: a page tree, one JSON endpoint, and one
+language-model call kept behind an interface rather than called directly. ESM-only
+TypeScript throughout.
 
-Two things follow from that last part, and they are most of why this template exists. A
-fake adapter is wired in by default, so `pnpm dev` answers a request before any
-credential exists — the first thing you do with a checkout is run it, not go and find an
-API key. And a project that wants no model at all deletes the layer in one piece instead
-of unpicking it, which a test keeps true rather than a convention.
+Two things follow from that last part. A fake adapter is wired in by default, so
+`pnpm dev` answers a request before any credential exists — the first thing you do with
+a checkout is run it, not go and find an API key. And the model layer can be deleted in
+one piece instead of unpicked, which a test keeps true rather than a convention.
+
+It grew out of a template. The template's locale-prefixed page tree and its `next-intl`
+catalogs are gone — this application renders one language, English — and so is its
+Anthropic adapter, leaving the fake as the only one wired today.
 
 `AGENTS.md` describes the architecture and the rules; this file is the tour.
 
@@ -25,16 +28,14 @@ pnpm install
 pnpm dev
 ```
 
-Then open <http://localhost:3000>, which redirects to the locale your browser asks for —
-`/en` or `/ja`. The page it renders is `src/app/[locale]/page.tsx`, and the text on it
-comes from `messages/en.json` and `messages/ja.json`.
+Then open <http://localhost:3000>. The page it renders is `src/app/page.tsx`.
 
-There is one API route, `POST /api/ask`, which takes
-`{ "prompt": "...", "locale": "en" }` and answers `{ "answer": "..." }`. The `locale` is
-a UI locale, and the handler is what maps it to the language the model writes in. The
-route runs against a fake language-model adapter, so it needs no credentials;
-`src/server/composition.ts` is the single place that decides which adapter is behind it.
-Copy `.env.example` to `.env` when you swap in one that needs a key.
+There is one API route, `POST /api/ask`, which takes `{ "prompt": "..." }` and answers
+`{ "answer": "..." }`. It asks the model to write in English, which is the one language
+this application deals in. The route runs against a fake language-model adapter, so it
+needs no credentials; `src/server/composition.ts` is the single place that decides which
+adapter is behind it. Copy `.env.example` to `.env` when you swap in one that needs a
+key.
 
 Swapping one in also closes the endpoint. `src/server/composition.ts` declares that the
 adapter it wires bills a provider, and `readServerEnv` then requires `API_ACCESS_KEY` —

@@ -3,7 +3,6 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import * as z from "zod";
 
 import type { LlmErrorCode, LlmPort } from "../../ai/index";
-import { DEFAULT_LOCALE, LOCALES, type Locale } from "../../i18n/locales";
 import { failure, readJsonBody } from "../http";
 
 /**
@@ -33,24 +32,15 @@ export interface AskHandlerDependencies {
 }
 
 /**
- * The BCP 47 tag each UI locale asks the model to answer in.
+ * The BCP 47 tag this endpoint asks the model to write its content in.
  *
  * @remarks
- * Two vocabularies meet here, and this is the only place they are allowed to:
- * a UI locale is the closed union of the languages this application ships a
- * message catalog for, while the port's `outputLanguage` is an open BCP 47 tag
- * naming a language a model can write. Keeping the mapping in the handler is
- * what lets a locale whose tag is not its own name — a `zh` catalog answered in
- * `zh-Hans` — be added without touching `src/ai/port.ts`, which knows nothing
- * about this application's catalogs.
- *
- * `satisfies` rather than an annotation: a locale added to `LOCALES` without an
- * entry here fails to compile instead of silently answering in English.
+ * A constant rather than a request field. The port's `outputLanguage` is an
+ * open BCP 47 tag naming a language a model can write, and this application
+ * answers in English only — practising English is what it is for, so letting a
+ * caller ask for another language would be a different product, not an option.
  */
-const OUTPUT_LANGUAGE_BY_LOCALE = {
-  en: "en",
-  ja: "ja",
-} as const satisfies Record<Locale, string>;
+const OUTPUT_LANGUAGE = "en";
 
 /**
  * The longest `prompt` this endpoint accepts, in characters once trimmed.
@@ -69,9 +59,6 @@ const MAX_PROMPT_LENGTH = 8_000;
 const askRequestSchema = z.object({
   /** The question put to the model, trimmed and bounded at both ends. */
   prompt: z.string().trim().min(1).max(MAX_PROMPT_LENGTH),
-
-  /** The UI locale the answer is for; the model writes in its language. */
-  locale: z.enum(LOCALES).default(DEFAULT_LOCALE),
 });
 
 /** The JSON body `POST /api/ask` answers with, and the shape asked of the model. */
@@ -169,14 +156,14 @@ export function createAskHandler(
       return failure(
         400,
         "ERR_BAD_REQUEST",
-        `The request body must be an object with a \`prompt\` of 1 to ${String(MAX_PROMPT_LENGTH)} characters once trimmed, and a \`locale\` this application ships if it names one.`,
+        `The request body must be an object with a \`prompt\` of 1 to ${String(MAX_PROMPT_LENGTH)} characters once trimmed.`,
       );
     }
 
     const result = await llm.generate({
       schema: askAnswerSchema,
       prompt: parsed.data.prompt,
-      outputLanguage: OUTPUT_LANGUAGE_BY_LOCALE[parsed.data.locale],
+      outputLanguage: OUTPUT_LANGUAGE,
       // A client that hangs up aborts this signal, which the port forwards to
       // the provider instead of paying for an answer nobody will read.
       signal: request.signal,

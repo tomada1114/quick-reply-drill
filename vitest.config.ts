@@ -15,20 +15,15 @@ const fixtures = "tests/fixtures/**";
 // because each drives a pure-function module under scripts/lib/ directly and
 // touches nothing else.
 //
-// The four boundary suites — ai-layer-removal, ai-vendor-swap, boundaries,
-// placeholders — are listed for the same reason workflows.test.ts is: they
-// assert against files on disk rather than against imported code, walking
-// whole trees to do it. They are fast today, but their cost scales with the
-// repository rather than with what they import, which is exactly the case
-// the short unit budget is not meant to cover.
+// The boundary suites — ai-layer-removal, boundaries — are
+// listed for the same reason workflows.test.ts is: they assert against files
+// on disk rather than against imported code, walking whole trees to do it.
+// They are fast today, but their cost scales with the repository rather than
+// with what they import, which is exactly the case the short unit budget is
+// not meant to cover.
 const automationTests = [
-  // The two LLM suites read committed fixtures from disk, and ai-port.test.ts
-  // additionally reaches the provider under `LLM_RECORD=1` — a real network
-  // call, which no 5 s budget should have to accommodate.
-  "tests/ai-anthropic.test.ts",
   "tests/ai-layer-removal.test.ts",
   "tests/ai-port.test.ts",
-  "tests/ai-vendor-swap.test.ts",
   "tests/boundaries.test.ts",
   "tests/check-staged.test.ts",
   "tests/ci-sync.test.ts",
@@ -36,7 +31,6 @@ const automationTests = [
   "tests/git-env.test.ts",
   "tests/labels.test.ts",
   "tests/lefthook-partial-stage.test.ts",
-  "tests/messages.test.ts",
   "tests/node-tools.test.ts",
   "tests/placeholders.test.ts",
   "tests/repo-tree.test.ts",
@@ -83,18 +77,6 @@ export default defineConfig({
   test: {
     environment: "node",
     alias: { "server-only": serverOnlyEmptyModule },
-    server: {
-      deps: {
-        // `next` ships no `exports` map, so `next/server` — which
-        // `next-intl/middleware` imports, and `proxy.ts` therefore reaches —
-        // is only resolvable by a bundler's extension search, never by Node's
-        // ESM resolver. Letting Vite transform `next-intl` rather than handing
-        // it to Node is what makes that import resolve the way it does in a
-        // real build. This changes who resolves the module, not what is
-        // executed.
-        inline: [/next-intl/],
-      },
-    },
     // Cleanup is the runner's job, not each test's. A spy, a stubbed env var or
     // a stubbed global that outlives the test that created it turns a later
     // failure into a mystery whose cause is in a different file, and makes the

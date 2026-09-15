@@ -21,8 +21,9 @@ style, and its fixtures (`writing-tests`); compile-time assertions with `expectT
 
 Every test file lives at `tests/<subject>.test.ts` or `tests/<subject>.test.tsx`, named
 after the seam it covers rather than after a file path — `tests/home-page.test.tsx` for
-the page component, `tests/proxy.test.ts` for the locale proxy, `tests/result.test.ts`
-for the `Result` vocabulary. Never co-locate a test next to the module it covers.
+the page component, `tests/server-env.test.ts` for the environment read,
+`tests/result.test.ts` for the `Result` vocabulary. Never co-locate a test next to the
+module it covers.
 
 This is settled, and it is deliberately against the App Router convention of keeping a
 test beside its component. Four mechanical reasons, each of which would have to be
@@ -79,10 +80,10 @@ subject:
   is what runs it, from `check:source` and from ci.yml's `static` job, both times
   straight after `Build`. A test here checks the build it was handed rather than making
   one: `tests/server-smoke.test.ts` fails with an instruction when `.next/BUILD_ID` is
-  missing, and again when it is older than `src/`, `messages/` or `next.config.ts`,
-  because a run against last commit's build passes every assertion while proving nothing
-  about the change. Adding a file here is a claim that no in-process test could have
-  asserted the same thing; prefer `automation` whenever one could.
+  missing, and again when it is older than `src/` or `next.config.ts`, because a run
+  against last commit's build passes every assertion while proving nothing about the
+  change. Adding a file here is a claim that no in-process test could have asserted the
+  same thing; prefer `automation` whenever one could.
 
 The two directions fail differently, which is why `automation` is a list rather than a
 glob. Forgetting to register a test that does I/O leaves it in `unit`, where the short

@@ -85,10 +85,10 @@ wants. Never silence it with `@ts-expect-error` or an `eslint-disable` to land t
 **Symptom:** formatting, lint and typecheck pass; CI's `Build` step fails at
 `pnpm run build` (`next build`). Often the only failing step.
 
-**Cause:** a bump to `next`, `react`, `react-dom`, `next-intl`, or anything
-`next.config.ts` loads. `next build` compiles the App Router tree, runs the framework's
-own plugins, and type-checks the route entry points — a surface no unit test reaches, so
-it is the first place a framework bump shows up.
+**Cause:** a bump to `next`, `react`, `react-dom`, or anything `next.config.ts` loads.
+`next build` compiles the App Router tree, runs the framework's own plugins, and
+type-checks the route entry points — a surface no unit test reaches, so it is the first
+place a framework bump shows up.
 
 **Fix:** reproduce it locally, since the CI log truncates the part that matters:
 

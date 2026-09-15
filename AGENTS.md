@@ -20,11 +20,14 @@ checked.
 
 ## Overview
 
-A template for a Next.js application on the App Router, written in ESM-only TypeScript:
-a locale-prefixed page tree, one JSON endpoint, and one language-model call behind a
-port that an adapter implements. It answers with a fake adapter out of the box, so
-`pnpm dev` works before any credential exists, and the whole AI layer is built to come
-out in one piece for a project that does not want one.
+A Next.js application on the App Router, written in ESM-only TypeScript: a page tree,
+one JSON endpoint, and one language-model call behind a port that an adapter implements.
+It answers with a fake adapter out of the box, so `pnpm dev` works before any credential
+exists, and the whole AI layer is built to come out in one piece.
+
+It grew out of a template, and the template's locale-prefixed page tree, its `next-intl`
+message catalogs and its Anthropic adapter have been removed: this application ships one
+UI language, English, and its own text lives in the components that render it.
 
 It is private: nothing here is packed, published, or consumed as a tarball, so there is
 no published `engines.node` floor — `.node-version` and `devEngines.runtime` carry the
@@ -76,22 +79,20 @@ reach for `--config.runtime-on-fail=ignore`: nothing here runs on any other Node
 Run the narrowest check that can fail, then the gate. Reaching for `pnpm check:source`
 on every edit is slow enough that it stops being run at all.
 
-| What you changed                                       | The narrowest check that can fail                    |
-| ------------------------------------------------------ | ---------------------------------------------------- |
-| A module under `src/core/` or `src/ai/`                | `pnpm exec vitest run tests/<module>.test.ts`        |
-| A handler or the composition root under `src/server/`  | `pnpm exec vitest run tests/server-handler.test.ts`  |
-| `src/server/env.ts` or `.env.example`                  | `pnpm exec vitest run tests/server-env.test.ts`      |
-| A page, layout or route handler under `src/app/`       | `pnpm build`, then `pnpm test:smoke`                 |
-| A component with a rendered test                       | `pnpm exec vitest run tests/<name>.test.tsx`         |
-| A catalog under `messages/`, or `src/i18n/messages.ts` | `pnpm exec vitest run tests/messages.test.ts`        |
-| `src/proxy.ts` or the locale routing behind it         | `pnpm exec vitest run tests/proxy.test.ts`           |
-| Anything only a running server shows                   | `pnpm build`, then `pnpm test:smoke`                 |
-| An import that crosses a zone boundary                 | `pnpm exec vitest run tests/boundaries.test.ts`      |
-| A test                                                 | `pnpm exec vitest run tests/<name>.test.ts`          |
-| A script under `scripts/`                              | `pnpm exec vitest run tests/<script>.test.ts`        |
-| A skill under `.agents/skills/`                        | `pnpm agents:sync && pnpm agents:check && pnpm test` |
-| `package.json`, `pnpm-workspace.yaml`                  | `pnpm install`, then `pnpm check:source`             |
-| Markdown                                               | `pnpm fix`                                           |
+| What you changed                                      | The narrowest check that can fail                    |
+| ----------------------------------------------------- | ---------------------------------------------------- |
+| A module under `src/core/` or `src/ai/`               | `pnpm exec vitest run tests/<module>.test.ts`        |
+| A handler or the composition root under `src/server/` | `pnpm exec vitest run tests/server-handler.test.ts`  |
+| `src/server/env.ts` or `.env.example`                 | `pnpm exec vitest run tests/server-env.test.ts`      |
+| A page, layout or route handler under `src/app/`      | `pnpm build`, then `pnpm test:smoke`                 |
+| A component with a rendered test                      | `pnpm exec vitest run tests/<name>.test.tsx`         |
+| Anything only a running server shows                  | `pnpm build`, then `pnpm test:smoke`                 |
+| An import that crosses a zone boundary                | `pnpm exec vitest run tests/boundaries.test.ts`      |
+| A test                                                | `pnpm exec vitest run tests/<name>.test.ts`          |
+| A script under `scripts/`                             | `pnpm exec vitest run tests/<script>.test.ts`        |
+| A skill under `.agents/skills/`                       | `pnpm agents:sync && pnpm agents:check && pnpm test` |
+| `package.json`, `pnpm-workspace.yaml`                 | `pnpm install`, then `pnpm check:source`             |
+| Markdown                                              | `pnpm fix`                                           |
 
 ## Architecture
 
@@ -100,16 +101,12 @@ src/
 ├── core/     # framework-free vocabulary: a Result, a domain type, a pure function
 ├── ai/       # the LlmPort, its error vocabulary, and the adapters behind it
 ├── server/   # the environment read, the composition root, and request handlers
-├── i18n/     # the locale list, its URL routing, and the typed message catalogs
-├── app/      # the Next.js App Router tree: pages, layouts, route handlers
-└── proxy.ts  # Next.js's request proxy: locale detection ahead of every page request
-messages/     # one JSON catalog per locale, shaped by en.json
+└── app/      # the Next.js App Router tree: pages, layouts, route handlers
 scripts/      # repository automation, authored as .mjs, never shipped
 ```
 
-Imports run one way — `app` → `server` → `ai` → `core` — with `i18n` a leaf that the
-page tree and the handlers both read. `core` is the bottom of that order: it names no
-framework and no vendor SDK, so it survives a change of either.
+Imports run one way — `app` → `server` → `ai` → `core`. `core` is the bottom of that
+order: it names no framework and no vendor SDK, so it survives a change of either.
 
 ### The three seams
 
@@ -155,17 +152,15 @@ outside the process can observe, plus what each zone publishes to the zone above
 
 - **Contract.** The HTTP surface of `POST /api/ask` — its request body, its answer, and
   the `error.code` vocabulary a client branches on. The `LlmPort` interface, `LlmError`
-  and its `ERR_LLM_*` codes, and everything else `src/ai/index.ts` names. The locale
-  list in `src/i18n/locales.ts` and the message keys `messages/en.json` defines.
+  and its `ERR_LLM_*` codes, and everything else `src/ai/index.ts` names.
 - **Private.** `src/ai/adapters/**`; the wiring inside `src/server/composition.ts`; and
   any module a zone's own surface does not re-export. A test reaches a private module
   through the surface that owns it, never around it.
 
 Next.js loads a page, layout, boundary or route handler under `src/app/` by file name
-through its default export, and does the same for `src/proxy.ts` and
-`src/i18n/request.ts`. Those are framework-owned entry points, where the file's path is
-the symbol's name; everywhere else under `src/` the surface is named exports, which is
-what a reviewer can read a diff of.
+through its default export. That tree is the one framework-owned entry point left, where
+the file's path is the symbol's name; everywhere else under `src/` the surface is named
+exports, which is what a reviewer can read a diff of.
 
 These edges are enforced twice and their values are written down in neither this file
 nor a skill: `eslint.config.mjs` carries them as `no-restricted-imports` zone blocks and
@@ -181,10 +176,9 @@ names its own boundary with its neighbours.
 
 | Skill                   | Load it when you are working on                                                                                                     |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `building-app-routes`   | a page, layout or Route Handler under `src/app/`, `src/proxy.ts`, or `src/server/`                                                  |
+| `building-app-routes`   | a page, layout or Route Handler under `src/app/`, or a module under `src/server/`                                                   |
 | `designing-ui`          | anything a user sees: a component's look, a color, a type size, spacing, motion, or a new screen                                    |
-| `localizing-ui`         | a catalog under `messages/`, a module under `src/i18n/`, or adding a UI string                                                      |
-| `integrating-llm`       | the `LlmPort`, an adapter under `src/ai/`, or a fixture under `tests/fixtures/llm/`                                                 |
+| `integrating-llm`       | the `LlmPort` or an adapter under `src/ai/`                                                                                         |
 | `writing-typescript`    | a `.ts` module or a `.tsx` component under `src/`                                                                                   |
 | `designing-errors`      | an error type or an `ERR_*` code, in `src/` or `scripts/`                                                                           |
 | `writing-tests`         | the body of a test under `tests/`                                                                                                   |
@@ -197,7 +191,7 @@ names its own boundary with its neighbours.
 | `merge-dependabot`      | landing open Dependabot or Renovate pull requests                                                                                   |
 | `updating-docs`         | `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, or whether a change owes a doc at all                                                  |
 | `triaging-issues`       | filing, labelling, or ranking a GitHub issue                                                                                        |
-| `starting-an-app`       | turning this template into a new app: the rename, the AI layer, the locales                                                         |
+| `starting-an-app`       | turning this template into a new app: the rename and the AI layer                                                                   |
 
 ## Security and human approval
 
@@ -314,17 +308,14 @@ while its declared task is something else.
 ## Conventions
 
 - All committed code, comments, configuration, and public documentation are in English.
-  `authoring-skills` applies this to a skill's `description`. The one exception is
-  `messages/*.json`: those are the UI message catalogs the application renders to a
-  reader, so `messages/ja.json` is Japanese by definition. The exception covers the
-  catalogs' string values and nothing else — their keys, and every comment, test, and
-  document about them, stay English. The one thing that may itself be non-English is a
-  literal whose exact bytes are what a check or a worked example exercises, where
-  writing it in English would destroy what it demonstrates —
-  `tests/placeholders.test.ts`'s `PLACEHOLDERS` is the case to compare against, for the
-  reason recorded there. Nothing wider: the prose around such a literal stays English —
-  a test's `describe` and `it` names, its assertion messages, its comments, and a
-  document's own sentences.
+  `authoring-skills` applies this to a skill's `description`. There is no catalog
+  exception any more: the message catalogs left with `next-intl`, and the application's
+  own UI text is English because English is the only language it renders. The one thing
+  that may itself be non-English is a literal whose exact bytes are what a check or a
+  worked example exercises, where writing it in English would destroy what it
+  demonstrates. Nothing wider: the prose around such a literal stays English — a test's
+  `describe` and `it` names, its assertion messages, its comments, and a document's own
+  sentences.
 
 - **A comment carries only what the code cannot** — a non-obvious why, a trap the next
   edit would spring, an external constraint. Default to none and keep the rest to a line

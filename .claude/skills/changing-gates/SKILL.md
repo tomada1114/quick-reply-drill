@@ -7,7 +7,7 @@ description: >
   workflow is proposed, a step is added to check:source or ci.yml, a lefthook stage or
   glob changes, an ESLint rule or a vitest project is added or loosened, or the question
   is which gate would have caught a change — including what none of them sees, such as
-  src/proxy.ts and anything needing a running server.
+  anything needing a running server.
 ---
 
 # Changing Gates
@@ -18,8 +18,7 @@ description: >
 given change at all. **Does not own:** adding a dependency the config then configures
 (`managing-dependencies`); a coverage floor's value or which vitest project a test joins
 (`placing-tests`); a `.mjs` under `scripts/` that a gate invokes
-(`writing-repo-scripts`); what `src/proxy.ts` does and where it belongs
-(`building-app-routes`); `.github/labels.yml` (`triaging-issues`).
+(`writing-repo-scripts`); `.github/labels.yml` (`triaging-issues`).
 
 ## The one rule every gate change shares
 
@@ -274,16 +273,15 @@ Traps that have cost time here:
   match disjoint file sets. Keep a new block disjoint from them, or restate what it
   still wants.
 - Anchor a zone pattern with a leading `../`. Unanchored, `**/server` also matches the
-  package subpath `next-intl/server`, which `src/i18n/request.ts` imports today;
-  `../**/server` cannot match any bare specifier, and every cross-zone import inside
-  `src/` starts with `../` because this repository declares no path alias. Same shape
-  for `../**/app` against `next/app`. `no-restricted-imports` matches this specifier
-  text through the `ignore` package rather than resolving it, and `ignore` treats a
-  leading `./` as a different string from a leading `../` — so `./../server` is
-  invisible to `../**/server` even though it resolves to the same module. Every `ZONE`
-  entry and `AI_LAYER_PRIVATE` therefore carries a `./../**` twin of each `../**`
-  pattern; a bare specifier still cannot start with `./..`, so the twin is exactly as
-  safe as the pattern it doubles.
+  package subpath `next/server`; `../**/server` cannot match any bare specifier, and
+  every cross-zone import inside `src/` starts with `../` because this repository
+  declares no path alias. Same shape for `../**/app` against `next/app`.
+  `no-restricted-imports` matches this specifier text through the `ignore` package
+  rather than resolving it, and `ignore` treats a leading `./` as a different string
+  from a leading `../` — so `./../server` is invisible to `../**/server` even though it
+  resolves to the same module. Every `ZONE` entry and `AI_LAYER_PRIVATE` therefore
+  carries a `./../**` twin of each `../**` pattern; a bare specifier still cannot start
+  with `./..`, so the twin is exactly as safe as the pattern it doubles.
 - A `group` accepts `!` negations, and the **last matching entry wins**. That is how
   `AI_LAYER_PRIVATE` states the AI layer's surface as an allow-list —
   `["../**/ai/**", "./../**/ai/**", "!../**/ai/index", "!./../**/ai/index"]` — rather
@@ -300,10 +298,10 @@ Traps that have cost time here:
   `public-api/explicit-surface`,
   `boundaries/core-is-framework-free-and-imports-no-zone`,
   `boundaries/ai-imports-only-core`, `boundaries/port-does-not-know-its-adapters`,
-  `boundaries/i18n-is-a-leaf`, `boundaries/app-reaches-the-ai-layer-through-src-ai`,
+  `boundaries/app-reaches-the-ai-layer-through-src-ai`,
   `boundaries/server-reaches-ai-through-src-ai-and-never-app`,
   `boundaries/private-trees-are-not-importable`, `automation/node-scripts`,
-  `tests/vitest-rules`, `tests/relaxations`. The six `boundaries/*` blocks are one
+  `tests/vitest-rules`, `tests/relaxations`. Five of the `boundaries/*` blocks are one
   import order written per zone, so they match disjoint file sets by construction. Name
   a new block the same way — the name is what a reader, and ESLint's own config
   inspector, has to identify it by.
@@ -328,21 +326,20 @@ Traps that have cost time here:
 
 No check here boots a browser, and only one boots a server: `pnpm run test:smoke` serves
 the last `pnpm build` with `next start` under `NODE_ENV=production` and asserts over
-`fetch` that `/` redirects to a locale-prefixed path, that `/en` and `/ja` render with
-the right `<html lang>`, that an unknown unprefixed path is redirected rather than 404ed
-and that the prefixed one 404s, and that `POST /api/ask` answers its documented
-statuses. Each hop is asserted with `redirect: "manual"`, because a followed redirect
-merges the proxy's answer with the route's and would pass with the proxy gone. That is
-the whole of what a running server is checked for — the seams between the layers, not
-their behaviour, which each layer's own suite owns.
+`fetch` that `/` is prerendered and serves 200 with the right `<html lang>`, `<title>`
+and description meta; that an unknown path 404s directly — no redirect, and exactly one
+`<html>`/`<body>` shell, which is what catches a boundary rendering its own document
+shell inside the root layout's; and that `POST /api/ask` answers its documented
+statuses. That is the whole of what a running server is checked for — the seams between
+the layers, not their behaviour, which each layer's own suite owns.
 
 It runs from `check:source` and from ci.yml's `static` job, both times immediately after
 `Build`, and from neither `pnpm test` nor `pnpm check:quick`: the build is what it
 serves, so a run without one would either fail or pay for a second build. It never
-builds for itself — it compares `.next/BUILD_ID` against `src/`, `messages/` and
-`next.config.ts` and refuses a missing or stale build, which is how the caller stays the
-only one paying for a build. A green `check:quick` therefore still says nothing about
-anything only a running server shows.
+builds for itself — it compares `.next/BUILD_ID` against `src/` and `next.config.ts` and
+refuses a missing or stale build, which is how the caller stays the only one paying for
+a build. A green `check:quick` therefore still says nothing about anything only a
+running server shows.
 
 Everything outside those five assertions is still a place a change can be wrong while
 every gate passes. A gate proposed to close such a gap is a real gate, not a lint rule,

@@ -34,9 +34,7 @@ const AUTHORED_SKILLS_ROOT = ".agents/skills/";
  * the whole of what it does; if this template ever grows a second thing to
  * compose, that file splits rather than staying half-deleted here. This test
  * file is on the list too — it names every path above and would itself be the
- * first dangling reference left behind. So is its sibling
- * `tests/ai-vendor-swap.test.ts`, whose whole subject is which vendor sits
- * behind a port that is no longer there.
+ * first dangling reference left behind.
  *
  * The `integrating-llm` skill is deleted rather than edited, because the whole
  * of its subject is the layer that is going away. Both its authored copy and
@@ -51,12 +49,8 @@ const REMOVED_PATHS = [
   "src/app/api",
   "src/server/composition.ts",
   "src/server/handlers/ask.ts",
-  "tests/ai-anthropic.test.ts",
   "tests/ai-layer-removal.test.ts",
   "tests/ai-port.test.ts",
-  "tests/ai-vendor-swap.test.ts",
-  "tests/fixtures/llm",
-  "tests/llm-replay.ts",
   "tests/server-handler.test.ts",
 ];
 
@@ -64,15 +58,19 @@ const REMOVED_PATHS = [
  * Vendor product names that name the AI layer without naming one of its paths.
  *
  * @remarks
- * Both are deliberately specific. `Anthropic` on its own would match
- * `scripts/lib/guard/credentials.mjs`, whose `sk-ant-` rule detects a leaked
- * key and stays whether or not this application calls a model. A name this
+ * It is deliberately specific. `OpenAI` on its own would match
+ * `scripts/lib/guard/credentials.mjs`, whose `sk-` rule detects a leaked key
+ * and stays whether or not this application calls a model. A name this
  * repository gives one of its own documents is not one of these —
  * `REMOVED_SKILL_NAMES` holds those, so an adapter author reading
  * `adding-an-adapter.md` adds a package and a credential here and nothing
  * else.
+ *
+ * `@anthropic-ai` is still listed although no adapter uses it: the ban in
+ * `eslint.config.mjs` outlives the SDK, so the removal has to take the
+ * specifier with it.
  */
-const AI_LAYER_TOKENS = ["ANTHROPIC_API_KEY", "@anthropic-ai"];
+const AI_LAYER_TOKENS = ["OPENAI_API_KEY", "@anthropic-ai", "@ai-sdk"];
 
 /**
  * Names this repository gives the AI layer's own surface, which a document can
@@ -89,8 +87,8 @@ const AI_LAYER_TOKENS = ["ANTHROPIC_API_KEY", "@anthropic-ai"];
  * Each needle is as narrow as the name it has to catch. A bare `LLM_` would
  * also match the `LLM_API_KEY` sample line in `tests/guard-rules.test.ts` and
  * `tests/check-staged.test.ts`, where it stands for any secret-shaped
- * assignment and stays whether or not this application calls a model; the two
- * prefixes here name the port's error codes and the fixture recorder instead.
+ * assignment and stays whether or not this application calls a model; the
+ * prefix here names the port's error codes instead.
  * `ask`, `port`, `handler` and `adapter` are left out for the same reason —
  * each appears in this repository's prose about something that is not the AI
  * layer, and a needle matching a survivor that is not on the edited lists
@@ -108,7 +106,6 @@ const AI_LAYER_TOKENS = ["ANTHROPIC_API_KEY", "@anthropic-ai"];
 const AI_LAYER_SYMBOLS = [
   "Llm",
   "ERR_LLM_",
-  "LLM_RECORD",
   "outputLanguage",
   "askHandler",
   "/api/ask",
@@ -157,11 +154,7 @@ const REMOVED_SKILL_NAMES = [
  * `tests/server-smoke.test.ts` asks the running application for every route it
  * publishes, `POST /api/ask` among them, so the removal deletes those cases
  * the same way it deletes the route; it is a test of the composed application,
- * not a module the layer is embedded in. `tests/proxy.test.ts` picked the same
- * route as its example of a nested API path the locale matcher leaves alone —
- * a case named `"a nested API route"` with `/api/ask` as the literal — and a
- * matcher test choosing a path that no longer exists needs a different
- * example, even though the matcher's own behaviour does not change. This
+ * not a module the layer is embedded in. This
  * half is where the separability property lives: it is the one that has to stay
  * near-empty, and an entry joining it means an application module now has to
  * be edited by the removal — the moment the layer has stopped coming out in
@@ -170,10 +163,8 @@ const REMOVED_SKILL_NAMES = [
 const EDITED_CODE_FILES = [
   ".env.example",
   "eslint.config.mjs",
-  "package.json",
   "src/server/env.ts",
   "tests/boundaries.test.ts",
-  "tests/proxy.test.ts",
   "tests/server-env.test.ts",
   "tests/server-smoke.test.ts",
   "vitest.config.ts",
@@ -187,10 +178,9 @@ const EDITED_CODE_FILES = [
  * AGENTS.md's Architecture section, the README's description of the one route,
  * the `starting-an-app` skill, which carries the removal procedure and so
  * names the removal set in prose, `building-app-routes`, which teaches the
- * Route Handler pattern through the one endpoint this template ships,
- * `localizing-ui`, which owns the one mapping from a UI locale to the port's
- * `outputLanguage`, `managing-dependencies`, which points a vendor-SDK bump at
- * the recorded fixtures that verify it offline, and `writing-typescript`,
+ * Route Handler pattern through the one endpoint this repository ships,
+ * `managing-dependencies`, which points a vendor-SDK bump at the AI layer, and
+ * `writing-typescript`,
  * `designing-errors`,
  * `writing-tests` and `type-testing`, which illustrate rules that outlive the
  * layer with worked examples drawn from it — the port contract suite and the
@@ -210,7 +200,6 @@ const EDITED_DOCUMENT_FILES = [
   ".agents/skills/building-app-routes/SKILL.md",
   ".agents/skills/changing-gates/SKILL.md",
   ".agents/skills/designing-errors/SKILL.md",
-  ".agents/skills/localizing-ui/SKILL.md",
   ".agents/skills/managing-dependencies/SKILL.md",
   ".agents/skills/starting-an-app/SKILL.md",
   ".agents/skills/type-testing/SKILL.md",

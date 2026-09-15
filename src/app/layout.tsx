@@ -1,20 +1,29 @@
-import type { ReactNode } from "react";
+import type { Metadata } from "next";
+import type { ReactElement, ReactNode } from "react";
 
 import "./globals.css";
 
 /**
- * The root layout Next.js requires, with the global stylesheet but no shell.
+ * The document shell every page and boundary renders inside.
  *
  * @remarks
- * `<html>` and `<body>` belong to `src/app/[locale]/layout.tsx`, which is the
- * first layout that knows the document's language. Next.js still requires a
- * layout at the root of the App Router tree, so this one passes its children
- * through untouched rather than rendering a second, language-less document
- * shell around them. Importing the stylesheet here makes it available to the
- * root-level not-found boundary too.
+ * This application ships one UI language, so `lang` is a literal rather than a
+ * value read per request. There is no locale segment above it and no root
+ * layout that does not know the language — those existed while `next-intl`
+ * routed `/en` and `/ja`, and went with it.
  */
+export const metadata: Metadata = {
+  title: "Quick Reply Drill",
+  description:
+    "Answer a one-line English question in thirty seconds, and get it scored the same way every time.",
+};
+
 export default function RootLayout({
   children,
-}: Readonly<{ children: ReactNode }>): ReactNode {
-  return children;
+}: Readonly<{ children: ReactNode }>): ReactElement {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
 }

@@ -39,28 +39,12 @@ import { readText, repoRoot, walk } from "./repo-tree";
  * data, and a bare `nextjs-app-template` would produce a duplicate row per
  * file that carries the full slug.
  *
- * The last three are what a reader sees, which the package name and the slug
- * do not cover: a project that renamed everything machine-facing still greets
- * its visitors as this template. Two are the app's display name, one per
- * catalog language, together covering both the browser tab and the page
- * heading; the third is the one-line `description` metadata, which renders
- * into `<meta name="description">` and so into a search result and a link
- * preview. Coverage for the display name is per known
- * value, not per key: each entry is a catalog's current title string, so a
- * `messages/*.json` added later with its own translated title contributes no
- * row until that value is added to this list. The Japanese title and
- * description are needles AGENTS.md's Conventions allows a test to quote
- * verbatim: deriving them from `messages/ja.json` at runtime would make their
- * inventory rows self-fulfilling — they would still appear after a correct
- * rename, so the list could never empty.
- *
- * The home page's body copy — `HomePage.intro` and `HomePage.localeCount` in
- * each catalog — is deliberately absent. It is demo copy for a demo page a
- * project rewrites or deletes on day one, and `localizing-ui` quotes
- * `ja.json`'s `localeCount` as its worked example of plural categories, so a
- * needle for it would put inventory rows on a skill whose subject is ICU
- * plurals rather than this template's identity. `starting-an-app` sends a
- * renaming project to that copy by hand instead.
+ * The reader-facing strings the template used to carry — its display name and
+ * one-line description, each written once per message catalog — are gone from
+ * this list along with `messages/` itself. What the visitor now reads is
+ * written directly in `src/app/layout.tsx` and `src/app/page.tsx`, and it names
+ * this application rather than the template, so there is no placeholder left to
+ * look for there.
  */
 const PLACEHOLDERS = [
   "my-package",
@@ -69,10 +53,6 @@ const PLACEHOLDERS = [
   "you@example.com",
   "A short description.",
   "tomada1114/nextjs-app-template",
-  "Next.js App Template",
-  "Next.js アプリテンプレート",
-  "An App Router skeleton.",
-  "App Router のひな形です。",
 ] as const;
 
 /**
@@ -80,15 +60,13 @@ const PLACEHOLDERS = [
  * `<file>: <placeholder>` rows.
  *
  * @remarks
- * These seven files *are* the template's identity, so a placeholder in them is
- * intended, not a leak: they are what a new app rewrites first. Four carry the
- * repository's identity — the package name and description, the slug, the
- * copyright holder — and four the copy a visitor reads: the localized metadata
- * and `HomePage.title` keys in each catalog. Everything else in
- * the tree — the rest of `src/`, `tests/`, `scripts/`, the skills, the
- * workflows, `CONTRIBUTING.md`, `AGENTS.md` — must name nothing of the sort,
- * so the rename is a bounded edit to seven files rather than a
- * repository-wide search that can miss one. Two of the rows are the template's
+ * These four files *are* the template's identity, so a placeholder in them is
+ * intended, not a leak: they are what a new app rewrites first. Each carries
+ * some of the repository's identity — the package name and description, the
+ * slug, the copyright holder. Everything else in the tree — `src/`, `tests/`,
+ * `scripts/`, the skills, the workflows, `CONTRIBUTING.md`, `AGENTS.md` — must
+ * name nothing of the sort, so the rename is a bounded edit to four files
+ * rather than a repository-wide search that can miss one. Two of the rows are the template's
  * real repository slug rather than a blank, deliberately: the CI badge and the
  * security-advisory link have to resolve *while this repository is the
  * template*, and a fork replaces them like any other row.
@@ -100,10 +78,6 @@ const EXPECTED_INVENTORY = [
   "README.md: Your Name",
   "README.md: my-package",
   "README.md: tomada1114/nextjs-app-template",
-  "messages/en.json: An App Router skeleton.",
-  "messages/en.json: Next.js App Template",
-  "messages/ja.json: App Router のひな形です。",
-  "messages/ja.json: Next.js アプリテンプレート",
   "package.json: A short description.",
   "package.json: my-package",
 ];
@@ -139,7 +113,7 @@ describe("the template's own identity strings", () => {
     "package.json",
     "CONTRIBUTING.md",
     "AGENTS.md",
-    "src/app/[locale]/page.tsx",
+    "src/app/page.tsx",
     "src/core/result.ts",
     "scripts/check-staged.mjs",
     ".github/workflows/ci.yml",

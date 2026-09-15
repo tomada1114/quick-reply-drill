@@ -1,9 +1,15 @@
-# Adding a second provider adapter
+# Adding a provider adapter
 
-Read `src/ai/adapters/anthropic/` end to end first. It is five small modules — the
-client, the request builder, the error mapping, the deadline, and the `generate` that
-joins them — and the split is worth copying, because it is what keeps any one of them
-under the per-file budget `eslint.config.mjs` sets.
+There is no provider adapter in the tree to read first — the Anthropic one was removed
+with its SDK, leaving `src/ai/adapters/fake/` as the only implementation. So this is the
+procedure for writing the _first_ one as much as a second, and the shape the removed one
+had is worth reproducing: five small modules — the client, the request builder, the
+error mapping, the deadline, and the `generate` that joins them — which is what keeps
+any one of them under the per-file budget `eslint.config.mjs` sets.
+
+Decide first whether an adapter is what you are writing at all. `integrating-llm`'s
+opening section records that whether the Vercel AI SDK sits behind this port or replaces
+it is undecided; settle that before step 1.
 
 ## Before you start
 
@@ -13,8 +19,7 @@ review record it owes is settled before the code, not after. **REQUIRED:**
 
 The adapter itself is the smaller half of this work. The larger half is the gate and
 boundary files that assert against the AI layer's shape, listed under "The gates that
-know the vendor" below; each was written when there had only ever been one vendor, so
-each needs the second one added rather than substituted.
+know the vendor" below.
 
 ## The adapter
 
@@ -31,9 +36,9 @@ each needs the second one added rather than substituted.
 4. Map the vendor's failures onto `LlmErrorCode` in its own module. Copy the axis, not
    the status numbers: the code is chosen by what a caller can _do_, and an unrecognised
    failure falls to `ERR_LLM_UNAVAILABLE`.
-5. Compose a total deadline into the request's signal, as
-   `src/ai/adapters/anthropic/deadline.ts` does. A vendor SDK that offers a per-attempt
-   timeout does not thereby bound the whole call.
+5. Compose a total deadline into the request's signal — see `integrating-llm`'s "A
+   request settles, in three parts". A vendor SDK that offers a per-attempt timeout does
+   not thereby bound the whole call.
 6. Publish it from `src/ai/index.ts`. That file is the layer's whole surface; the
    adapter's own modules stay private to it.
 
@@ -56,38 +61,39 @@ describeLlmPortContract("createMyAdapter", {
 });
 ```
 
-The harness is the only thing that differs between adapters; the assertions do not, and
-that is the point — the same cases run against the fake, the recorded Anthropic
-exchange, and yours. `failsWith` must be able to produce **every** member of
-`LlmErrorCode`; if one of them cannot be provoked from your vendor, that is a finding
+`replaying`, `portFor` and `neverAnswering` above are yours to write: the replay helpers
+the removed adapter used went with it, and how yours substitutes the transport is the
+open question `integrating-llm` names. The harness is the only thing that differs
+between adapters; the assertions do not, and that is the point — the same cases run
+against the fake and against yours. `failsWith` must be able to produce **every** member
+of `LlmErrorCode`; if one of them cannot be provoked from your vendor, that is a finding
 about the mapping, not a case to skip.
 
 Adapter-specific behaviour — the status table, a vendor quirk, the request body it
-builds — goes in its own suite alongside `tests/ai-anthropic.test.ts`, not into the
-shared contract.
+builds — goes in its own suite, `tests/ai-<vendor>.test.ts`, not into the shared
+contract.
 
 ## The gates that know the vendor
 
-- `eslint.config.mjs` — the SDK ban is a named constant used by two `boundaries/*`
-  blocks. Add the new package to it; keep the blocks' file sets disjoint, as the comment
-  above them requires.
-- `tests/boundaries.test.ts` — three places: the `forbidden` package list for
-  `src/core/`, the vendor-SDK case for `src/app/` and `src/server/`, and the exhaustive
-  module list in "walks the whole src/ tree", which fails until every new file is added
-  to it. That last failure is intended; it is how a new module is noticed at all.
+- `eslint.config.mjs` — the SDK ban is `VENDOR_LLM_SDK`, a named constant used by three
+  `boundaries/*` blocks. Add the new package to it; keep the blocks' file sets disjoint,
+  as the comment above them requires.
+- `tests/boundaries.test.ts` — its own `VENDOR_SDKS` list, restated rather than imported
+  so the two layers stay independently checkable, plus the exhaustive module list in
+  "walks the whole src/ tree", which fails until every new file is added to it. That
+  failure is intended; it is how a new module is noticed at all.
 - `tests/ai-layer-removal.test.ts` — `AI_LAYER_TOKENS` gains the new package name, and
   the new environment variable name if there is one. Without that, a file naming the new
   vendor is invisible to the removal check. `REMOVED_PATHS` gains the adapter's own
-  suite, beside `tests/ai-anthropic.test.ts`: it reads `tests/fixtures/llm` and imports
-  `tests/llm-replay.ts`, so a suite left off that list fails this test as a surviving
-  file naming a removed one. `REMOVED_SKILL_NAMES` is derived from `REMOVED_PATHS` and
-  is not edited by hand — a new adapter adds a package name and a credential name to
-  `AI_LAYER_TOKENS`, and nothing to the skill-name list.
-- `src/server/env.ts` and `.env.example` — a second credential is a second name in the
-  schema and a matching line in the example. `tests/server-env.test.ts` asserts the
-  correspondence.
-- `vitest.config.ts` — a suite that reads fixtures from disk joins `automationTests`, as
-  the two existing LLM suites do. **REQUIRED:** `placing-tests`.
+  suite, and any fixture tree or replay helper it reads. `REMOVED_SKILL_NAMES` is
+  derived from `REMOVED_PATHS` and is not edited by hand.
+- `tests/ai-vendor-swap.test.ts` — re-create it. It was deleted with the Anthropic
+  adapter because every assertion in it named a vendor that no longer appears anywhere;
+  the first adapter is what gives it a subject again.
+- `src/server/env.ts` and `.env.example` — a credential is a name in the schema and a
+  matching line in the example. `tests/server-env.test.ts` asserts the correspondence.
+- `vitest.config.ts` — a suite that reads fixtures from disk joins `automationTests`.
+  **REQUIRED:** `placing-tests`.
 - `src/server/composition.ts` — the one-line vendor choice. It is a line edit, not a
   runtime switch: no environment variable selects between adapters, because that moves
   the choice out of the file whose whole job is to hold it.

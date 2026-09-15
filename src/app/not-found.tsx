@@ -1,22 +1,19 @@
-import { getLocale } from "next-intl/server";
+import Link from "next/link";
 import type { ReactElement } from "react";
 
-import { MESSAGES } from "../i18n/messages";
-
-/** The shelled fallback for framework-level misses outside a locale shell. */
-export default async function RootNotFound(): Promise<ReactElement> {
-  const locale = await getLocale();
-  const messages = MESSAGES[locale].NotFound;
-
+/**
+ * The 404 boundary, rendered inside the root layout's document shell.
+ *
+ * @remarks
+ * `next/link` directly, rather than a locale-aware wrapper: there is no locale
+ * prefix for a link to lose now that the page tree is flat.
+ */
+export default function NotFound(): ReactElement {
   return (
-    <html lang={locale}>
-      <body>
-        <main>
-          <h1>{messages.title}</h1>
-          <p>{messages.description}</p>
-          <a href={`/${locale}`}>{messages.homeLink}</a>
-        </main>
-      </body>
-    </html>
+    <main>
+      <h1>Page not found</h1>
+      <p>The page you requested does not exist.</p>
+      <Link href="/">Return to the home page</Link>
+    </main>
   );
 }
