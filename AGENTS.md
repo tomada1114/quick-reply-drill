@@ -182,6 +182,7 @@ names its own boundary with its neighbours.
 | Skill                   | Load it when you are working on                                                                                                     |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `building-app-routes`   | a page, layout or Route Handler under `src/app/`, `src/proxy.ts`, or `src/server/`                                                  |
+| `designing-ui`          | anything a user sees: a component's look, a color, a type size, spacing, motion, or a new screen                                    |
 | `localizing-ui`         | a catalog under `messages/`, a module under `src/i18n/`, or adding a UI string                                                      |
 | `integrating-llm`       | the `LlmPort`, an adapter under `src/ai/`, or a fixture under `tests/fixtures/llm/`                                                 |
 | `writing-typescript`    | a `.ts` module or a `.tsx` component under `src/`                                                                                   |
