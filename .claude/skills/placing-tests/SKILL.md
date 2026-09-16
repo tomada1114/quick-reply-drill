@@ -63,9 +63,9 @@ subject:
   only project running under jsdom, and the only one loading `tests/dom-setup.ts`, which
   registers the DOM matchers and Testing Library's `cleanup`. A test that renders a
   component under jsdom goes here by being written as `.tsx`; there is no list to join.
-  `tests/home-page.test.tsx`, the only one today, renders a synchronous Server Component
-  — this template ships no Client Component. It has no I/O either, so it keeps the same
-  short budget as `unit`.
+  `tests/home-page.test.tsx` renders a synchronous Server Component example. It has no
+  I/O, so it keeps the same short budget as `unit`; tests that render client behavior
+  use this project too.
 - **`automation`** — the explicit `automationTests` list at the top of
   `vitest.config.ts`, with a 120-second budget. Everything that shells out, reads or
   writes a temp directory, spawns `git`/`node`, or walks whole trees on disk asserting
