@@ -1,4 +1,6 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -89,8 +91,15 @@ const VENDOR_DOCUMENT_FILES = [
   "README.md",
 ] as const;
 
-/** This file, which necessarily spells out every needle above. */
-const THIS_FILE = "tests/ai-vendor-swap.test.ts";
+/**
+ * This file's own repo-relative path, which necessarily spells out every needle above.
+ *
+ * @remarks
+ * Derived from `import.meta.url` rather than typed as a literal, so it cannot drift out
+ * of step with the identical literal `tests/ai-vendor-swap.test.ts` in
+ * {@link VENDOR_CODE_FILES}.
+ */
+const THIS_FILE = path.relative(repoRoot, fileURLToPath(import.meta.url));
 
 function namesANeedle(text: string): boolean {
   return VENDOR_NEEDLES.some((needle) => text.includes(needle));
@@ -111,8 +120,14 @@ function filesNamingANeedle(files: readonly ScannedFile[]): string[] {
 }
 
 // `walk` skips whole directories named `fixtures`, so the two fixture files are added by
-// hand; nothing else here needs that treatment.
-const scanned = [...walk(repoRoot), ...FIXTURE_FILES].sort();
+// hand; nothing else here needs that treatment. The existence check is what keeps a
+// renamed or deleted `FIXTURE_FILES` entry out of `scanned` rather than crashing
+// `scannedFiles` below with an ENOENT at module scope: dropped from `scanned`, it instead
+// fails loudly and specifically, through the "is scanned" case for that exact file.
+const scanned = [
+  ...walk(repoRoot),
+  ...FIXTURE_FILES.filter((relative) => existsSync(path.join(repoRoot, relative))),
+].sort();
 
 const scannedFiles: ScannedFile[] = scanned.flatMap((relative) => {
   const text = readText(relative);
@@ -132,7 +147,7 @@ describe("the vendor is named only where integrating-llm's 'Swapping the vendor'
     },
   );
 
-  it("is not looked for in this file, which has to name every needle", () => {
+  it("lists itself among the files allowed to name every needle", () => {
     expect(expectedVendorFiles).toContain(THIS_FILE);
   });
 
@@ -153,15 +168,28 @@ describe("the vendor is named only where integrating-llm's 'Swapping the vendor'
   });
 
   it("flags a listed file that stopped naming a needle, not only an unlisted one that started", () => {
+    // `actual` (what still names a needle) no longer includes the stale file, while
+    // `declared` (what the bound still expects) does. Asserting that comparing the two
+    // with `toStrictEqual` — the same comparison the exactness check above makes — throws
+    // is what proves that direction actually fails; `not.toStrictEqual` on its own would
+    // hold for any two different arrays and assert nothing about exactness at all.
     const declared = ["src/app/stale.ts"];
     const actual = filesNamingANeedle([
       { relative: "src/app/stale.ts", text: "nothing vendor-shaped here" },
     ]);
-    expect(actual).not.toStrictEqual(declared);
+    expect(() => expect(actual).toStrictEqual(declared)).toThrow();
   });
 });
 
 // --- import boundaries the bound also implies --------------------------------
+//
+// The adapter-bypass check this section used to run (`src/server/handlers/**` and
+// `src/app/**` import nothing from `src/ai/adapters/**`) duplicated
+// `tests/boundaries.test.ts`'s "names no module but its surface" case at strictly
+// narrower scope — same specifier-resolution logic, a subset of the files. It was
+// removed rather than kept in step with a second copy; that existing suite is what
+// enforces it. The fake-adapter SDK check below is not a duplicate — nothing else in the
+// suite asserts that the fake adapter itself never reaches the real SDK — so it stays.
 
 /** Every module specifier `source` imports, re-exports, or `import()`s. */
 function importSpecifiers(source: string): string[] {
@@ -184,26 +212,6 @@ function isLlmSdkSpecifier(specifier: string): boolean {
   );
 }
 
-/**
- * The repo-relative module `specifier` resolves to from `module`, or `undefined` for a
- * package specifier.
- *
- * @remarks
- * Restated from `tests/boundaries.test.ts` rather than imported from it: the two suites
- * check the same bound independently, the way that file's own `LLM_SDKS` list is
- * restated from `eslint.config.mjs` rather than imported, so one of the three losing its
- * copy still leaves the other two checking it.
- */
-function resolveWithin(module: string, specifier: string): string | undefined {
-  if (specifier.startsWith("@/")) {
-    return path.posix.normalize(path.posix.join("src", specifier.slice("@/".length)));
-  }
-  if (!specifier.startsWith(".")) {
-    return undefined;
-  }
-  return path.posix.normalize(path.posix.join(path.posix.dirname(module), specifier));
-}
-
 interface ScannedModule {
   readonly relative: string;
   readonly specifiers: readonly string[];
@@ -224,15 +232,29 @@ function sdkOffenders(modules: readonly ScannedModule[]): string[] {
   );
 }
 
-function adapterBypassOffenders(modules: readonly ScannedModule[]): string[] {
-  return modules.flatMap((module) =>
-    module.specifiers
-      .filter((specifier) =>
-        resolveWithin(module.relative, specifier)?.startsWith("src/ai/adapters/"),
-      )
-      .map((specifier) => `${module.relative}: ${specifier}`),
-  );
-}
+// Pins `importSpecifiers` directly, the same way `tests/boundaries.test.ts` pins its own
+// copy with `SCANNER_CONTROL`: stubbing this function to always return `[]` would
+// otherwise leave every SDK-import check below green while enforcing nothing.
+const IMPORT_SCANNER_CONTROL = `
+import { createOpenAI } from "@ai-sdk/openai";
+import { named } from "./errors";
+export { re } from "../../port";
+const lazy = await import("ai");
+// import { commented } from "@ai-sdk/anthropic";
+/* import { blocked } from "@ai-sdk/blocked"; */
+const message = "not from \\"@ai-sdk/fake-string\\"";
+`;
+
+describe("the import scanner the SDK checks below run on", () => {
+  it("finds every spelling of an import and nothing that only looks like one", () => {
+    expect(importSpecifiers(IMPORT_SCANNER_CONTROL)).toStrictEqual([
+      "@ai-sdk/openai",
+      "./errors",
+      "../../port",
+      "ai",
+    ]);
+  });
+});
 
 const vendorNeutralAiModules = scanned
   .filter(
@@ -246,22 +268,18 @@ const vendorNeutralAiModules = scanned
     return module === undefined ? [] : [module];
   });
 
-const handlerAndAppModules = scanned
-  .filter(
-    (relative) =>
-      relative.startsWith("src/server/handlers/") || relative.startsWith("src/app/"),
-  )
-  .flatMap((relative) => {
-    const module = toModule(relative);
-    return module === undefined ? [] : [module];
-  });
-
-describe("the port, the errors, the fake adapter, and everything above the AI layer stay vendor-free", () => {
-  it("finds real files to check, so the rows below are not vacuous by omission", () => {
-    expect(vendorNeutralAiModules.map((module) => module.relative)).toEqual(
+describe("the port, the errors, and the fake adapter stay vendor-free", () => {
+  it("finds real files to check, so the row below is not vacuous by omission", () => {
+    const relatives = vendorNeutralAiModules.map((module) => module.relative);
+    expect(relatives).toEqual(
       expect.arrayContaining(["src/ai/port.ts", "src/ai/errors.ts"]),
     );
-    expect(handlerAndAppModules.length).toBeGreaterThan(0);
+    // `arrayContaining` above only pins the two single files; a renamed
+    // `src/ai/adapters/fake/` would drop out of `vendorNeutralAiModules` without either
+    // of them noticing, and the SDK check below would then pass over an empty set.
+    expect(
+      relatives.some((relative) => relative.startsWith("src/ai/adapters/fake/")),
+    ).toBe(true);
   });
 
   it("src/ai/port.ts, src/ai/errors.ts and the fake adapter import no LLM SDK", () => {
@@ -277,20 +295,5 @@ describe("the port, the errors, the fake adapter, and everything above the AI la
         },
       ]),
     ).toStrictEqual(["src/ai/adapters/fake/index.ts: @ai-sdk/openai"]);
-  });
-
-  it("src/server/handlers/** and src/app/** import nothing from src/ai/adapters/**", () => {
-    expect(adapterBypassOffenders(handlerAndAppModules)).toStrictEqual([]);
-  });
-
-  it("reports a bypass when there is one, so the row above is not vacuous", () => {
-    expect(
-      adapterBypassOffenders([
-        {
-          relative: "src/server/probe.ts",
-          specifiers: ["../ai/adapters/openai/index", "../ai/index"],
-        },
-      ]),
-    ).toStrictEqual(["src/server/probe.ts: ../ai/adapters/openai/index"]);
   });
 });
