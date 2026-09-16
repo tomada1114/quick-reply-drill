@@ -86,6 +86,16 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 describe("Dashboard", () => {
+  it("shows a loading indicator while history is being read", async () => {
+    render(<Dashboard storage={new MapStorage()} />);
+
+    expect(screen.getByRole("status", { name: "Loading history" })).toBeInTheDocument();
+    expect(await screen.findByText(/No reps yet\./)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("status", { name: "Loading history" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the empty state with a link back to the drill", async () => {
     render(<Dashboard storage={new MapStorage()} />);
 
@@ -169,6 +179,34 @@ describe("Dashboard", () => {
     expect(screen.getAllByRole("table")).toHaveLength(2);
   });
 
+  it("shows a loading indicator while the summary is being written", async () => {
+    const storage = new MapStorage();
+    seed(storage, [makeRecord({ id: "a" })]);
+    let resolveSummary: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveSummary = resolve;
+          }),
+      ),
+    );
+
+    render(<Dashboard storage={storage} />);
+    await screen.findAllByRole("row");
+    fireEvent.click(screen.getByRole("button", { name: "Ask for a summary" }));
+
+    expect(screen.getByRole("status", { name: "Writing summary" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ask for a summary" })).toBeDisabled();
+
+    resolveSummary?.(jsonResponse(200, { summary: "You're improving steadily." }));
+    expect(await screen.findByText("You're improving steadily.")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("status", { name: "Writing summary" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("posts at most MAX_DASHBOARD_RECORDS records and renders the returned paragraph", async () => {
     const storage = new MapStorage();
     seed(
@@ -219,5 +257,8 @@ describe("Dashboard", () => {
     expect(
       await screen.findByText("The summary did not load (ERR_LLM_TIMEOUT). Try again."),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("status", { name: "Writing summary" }),
+    ).not.toBeInTheDocument();
   });
 });

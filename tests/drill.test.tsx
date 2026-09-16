@@ -175,6 +175,31 @@ describe("Drill", () => {
     expect(screen.getByText("Question number 1?")).toBeInTheDocument();
   });
 
+  it("shows a loading indicator while a reply is being scored", async () => {
+    const { scoreMock } = stubFetch();
+    let resolveScore: ((response: Response) => void) | undefined;
+    scoreMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveScore = resolve;
+      }),
+    );
+    await renderDrill(new MapStorage());
+
+    clickStart();
+    typeReply("Sure, I'm free then.");
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(screen.getByRole("status", { name: "Scoring reply" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+
+    resolveScore?.(jsonResponse(200, makeScoreResponse()));
+    await flush();
+
+    expect(
+      screen.queryByRole("status", { name: "Scoring reply" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("transitions to feedback with the total computed from the canned sheet on Send", async () => {
     const { scoreMock } = stubFetch();
     scoreMock.mockReturnValueOnce(jsonResponse(200, makeScoreResponse()));
@@ -274,6 +299,9 @@ describe("Drill", () => {
     expect(
       screen.getByText("The scorer did not answer (ERR_LLM_TIMEOUT). Try again."),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("status", { name: "Scoring reply" }),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     await flush();
@@ -375,7 +403,9 @@ describe("Drill", () => {
       fireEvent.click(screen.getByRole("button", { name: "Next" }));
     }
 
-    expect(screen.getByText("Loading questions…")).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Loading questions" }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
     expect(screen.queryByText(/ERR_UNKNOWN/)).not.toBeInTheDocument();
 
@@ -383,5 +413,8 @@ describe("Drill", () => {
     await flush();
 
     expect(screen.getByText("Question number 1?")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("status", { name: "Loading questions" }),
+    ).not.toBeInTheDocument();
   });
 });
