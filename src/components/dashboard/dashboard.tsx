@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { createRecordsStore, type RecordStorage } from "@/components/lib/records-store";
 import { DrillCard } from "@/components/shared/card";
 import { BODY_TEXT_CLASS_NAME } from "@/components/shared/format";
+import { LoadingIndicator } from "@/components/shared/loading-indicator";
 import type { DrillRecord } from "@/core/records";
 
 import { DashboardContent } from "./dashboard-content";
@@ -67,7 +68,7 @@ export function Dashboard({ storage }: DashboardProps): ReactElement {
         <DrillCard>
           <h1 className="font-mono text-micro uppercase text-slate">DASHBOARD</h1>
           {records === undefined ? (
-            <p className="font-sans text-caption text-slate">Loading…</p>
+            <LoadingIndicator label="Loading history" />
           ) : records.length === 0 ? (
             <p className={BODY_TEXT_CLASS_NAME}>
               No reps yet. <Link href="/">Start one</Link>.

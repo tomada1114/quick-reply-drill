@@ -109,8 +109,8 @@
   }
 }
 
-/* This design spends no meaning on motion, so honoring the preference costs
- * nothing: every transition and animation collapses to effectively instant. */
+/* The loading ellipsis uses motion as a progress cue, so reduced motion keeps
+ * its accessible status and static mark while collapsing every animation. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

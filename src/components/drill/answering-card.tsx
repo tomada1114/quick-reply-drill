@@ -3,6 +3,7 @@ import type { ChangeEvent, ReactElement } from "react";
 import { cn } from "@/components/lib/utils";
 import { DrillCard, DrillDivider } from "@/components/shared/card";
 import { BODY_TEXT_CLASS_NAME, describeApiError } from "@/components/shared/format";
+import { LoadingIndicator } from "@/components/shared/loading-indicator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MAX_SCORE_ANSWER_LENGTH, type WireQuestion } from "@/core/wire";
@@ -28,8 +29,8 @@ const URGENT_THRESHOLD_MS = 10_000;
  * The drill card: countdown and scenario line in the header, the question and
  * the reply textarea in the body, the hint and the one filled action in the
  * footer. Rendered for both `"answering"` and `"scoring"` — the footer action
- * relabels to a caption plus a disabled `Send` while a request is in flight,
- * and to body text plus `Retry` once one has failed.
+ * shows a loading indicator plus a disabled `Send` while a request is in
+ * flight, and body text plus `Retry` once one has failed.
  */
 export function AnsweringCard({
   question,
@@ -46,11 +47,7 @@ export function AnsweringCard({
   const urgent = remainingMs > 0 && remainingMs < URGENT_THRESHOLD_MS;
   const disabled = submitting || hasError;
 
-  const footerHint = submitting
-    ? "Scoring…"
-    : hasError
-      ? undefined
-      : "Reply in one or two sentences.";
+  const footerHint = hasError ? undefined : "Reply in one or two sentences.";
   const buttonLabel = hasError ? "Retry" : "Send";
   const buttonDisabled = hasError ? false : submitting || reply.trim() === "";
 
@@ -108,10 +105,11 @@ export function AnsweringCard({
           // `w-full`, and without wrapping it sits beside the hint and runs
           // past the viewport instead of dropping onto its own line.
           "flex flex-wrap items-center gap-3",
-          footerHint ? "justify-between" : "justify-end",
+          footerHint || submitting ? "justify-between" : "justify-end",
         )}
       >
-        {footerHint ? (
+        {submitting ? <LoadingIndicator label="Scoring reply" /> : null}
+        {!submitting && footerHint ? (
           <p className="mb-0 font-sans text-caption text-slate">{footerHint}</p>
         ) : null}
         <Button

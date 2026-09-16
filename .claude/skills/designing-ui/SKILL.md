@@ -129,6 +129,10 @@ a measure of 65-75 characters, with the button that requests it directly above.
   the question (it must be readable the instant the clock starts), no number roll-up on
   the score. The countdown does not pulse. Honor `prefers-reduced-motion` by dropping
   every transition, which this design can afford because none of them carries meaning.
+- Loading uses one shared inline status treatment: the slate caption plus a mono
+  ellipsis. The ellipsis may pulse while a request is in flight;
+  `prefers-reduced-motion` leaves it static. Use this treatment for every request wait,
+  not a spinner, progress bar, or new hue.
 - Focus is visible on every control: a 2px charcoal ring offset 2px, never removed to
   tidy the textarea. The textarea is the first focused element when a rep starts, with
   no click required.

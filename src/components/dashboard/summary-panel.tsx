@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { fetchDashboardSummary } from "@/components/shared/api";
 import { describeApiError } from "@/components/shared/format";
+import { LoadingIndicator } from "@/components/shared/loading-indicator";
 import { Button } from "@/components/ui/button";
 import type { DrillRecord } from "@/core/records";
 
@@ -68,7 +69,7 @@ export function SummaryPanel({ records }: SummaryPanelProps): ReactElement {
           Ask for a summary
         </Button>
         {state.status === "pending" ? (
-          <p className="mb-0 font-sans text-caption text-slate">Writing…</p>
+          <LoadingIndicator label="Writing summary" />
         ) : null}
         {state.status === "error" ? (
           <p className="mb-0 font-sans text-caption text-slate">

@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 
 import { DrillCard } from "@/components/shared/card";
 import { describeApiError } from "@/components/shared/format";
+import { LoadingIndicator } from "@/components/shared/loading-indicator";
 import { Button } from "@/components/ui/button";
 
 import type { QuestionQueueStatus } from "./use-question-queue";
@@ -49,9 +50,7 @@ export function IdleScreen({
             {describeApiError(error, "The question queue did not load")}
           </p>
         ) : null}
-        {waiting ? (
-          <p className="mb-0 font-sans text-caption text-slate">Loading questions…</p>
-        ) : null}
+        {waiting ? <LoadingIndicator label="Loading questions" /> : null}
       </div>
     </DrillCard>
   );
