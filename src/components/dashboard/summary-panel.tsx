@@ -68,10 +68,10 @@ export function SummaryPanel({ records }: SummaryPanelProps): ReactElement {
           Ask for a summary
         </Button>
         {state.status === "pending" ? (
-          <p className="font-sans text-caption text-slate">Writing…</p>
+          <p className="mb-0 font-sans text-caption text-slate">Writing…</p>
         ) : null}
         {state.status === "error" ? (
-          <p className="font-sans text-caption text-slate">
+          <p className="mb-0 font-sans text-caption text-slate">
             {describeApiError(state.error, "The summary did not load")}
           </p>
         ) : null}

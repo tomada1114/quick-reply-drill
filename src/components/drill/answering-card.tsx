@@ -111,7 +111,7 @@ export function AnsweringCard({
         )}
       >
         {footerHint ? (
-          <p className="font-sans text-caption text-slate">{footerHint}</p>
+          <p className="mb-0 font-sans text-caption text-slate">{footerHint}</p>
         ) : null}
         <Button
           onClick={hasError ? onRetry : onSend}
