@@ -103,34 +103,26 @@ const LLM_SDK = [
  * can start with `@/` — a scoped package is `@scope/name`, and `/` is not a
  * legal scope. A zone left without its `@/` twin would be a boundary the alias
  * walks straight through, which is why every entry here carries both.
+ *
+ * @param {string} name
+ * @returns {string[]}
  */
-const ZONE = {
-  app: [
-    "../**/app",
-    "../**/app/**",
-    "./../**/app",
-    "./../**/app/**",
-    "@/app",
-    "@/app/**",
-  ],
-  server: [
-    "../**/server",
-    "../**/server/**",
-    "./../**/server",
-    "./../**/server/**",
-    "@/server",
-    "@/server/**",
-  ],
-  ai: ["../**/ai", "../**/ai/**", "./../**/ai", "./../**/ai/**", "@/ai", "@/ai/**"],
-  components: [
-    "../**/components",
-    "../**/components/**",
-    "./../**/components",
-    "./../**/components/**",
-    "@/components",
-    "@/components/**",
-  ],
-};
+function zonePatterns(name) {
+  return [
+    `../**/${name}`,
+    `../**/${name}/**`,
+    `./../**/${name}`,
+    `./../**/${name}/**`,
+    `@/${name}`,
+    `@/${name}/**`,
+  ];
+}
+
+const ZONE = /** @type {Record<"app" | "server" | "ai" | "components", string[]>} */ (
+  Object.fromEntries(
+    ["app", "server", "ai", "components"].map((name) => [name, zonePatterns(name)]),
+  )
+);
 
 /**
  * Every module inside the AI layer except the one it publishes.

@@ -6,14 +6,15 @@ import { cn } from "@/components/lib/utils";
 
 // Copied from the shadcn/ui registry (`pnpm dlx shadcn@latest add button`) and
 // kept close to what the CLI writes, so the next `add` is a readable diff
-// rather than a merge. Three edits were made on the way in: the registry's
+// rather than a merge. Four edits were made on the way in: the registry's
 // `cn` package and `radix-ui` umbrella are replaced by this repository's own
-// `cn` and by `@radix-ui/react-slot` (see the PR's dependency review), and the
+// `cn` and by `@radix-ui/react-slot` (see the PR's dependency review); the
 // two components carry the explicit return types this repository's ESLint
-// config requires. The color utilities below name theme tokens that do not
-// exist yet — issue #14 declares them in the `@theme` block of
-// `src/app/globals.css`, and restyles these classes to the locked direction
-// the `designing-ui` skill holds.
+// config requires; and the props type is an `interface extends` rather than
+// the registry's `&` intersection, per the `writing-typescript` skill. The
+// color utilities below name theme tokens that do not exist yet — issue #14
+// declares them in the `@theme` block of `src/app/globals.css`, and restyles
+// these classes to the locked direction the `designing-ui` skill holds.
 const buttonVariants = cva(
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
@@ -46,16 +47,18 @@ const buttonVariants = cva(
   },
 );
 
+interface ButtonProps
+  extends ComponentProps<"button">, VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
   ...props
-}: ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }): ReactElement {
+}: ButtonProps): ReactElement {
   const Comp = asChild ? Slot : "button";
 
   return (

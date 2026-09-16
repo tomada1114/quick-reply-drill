@@ -307,6 +307,15 @@ function aiLayerBypasses(modules: readonly Module[]): string[] {
   );
 }
 
+/** `"<file>: <specifier>"` for every import of `modules` reaching `pkg`. */
+function packageOffenders(modules: readonly Module[], pkg: string): string[] {
+  return modules.flatMap((module) =>
+    module.specifiers
+      .filter((specifier) => importsPackage(specifier, pkg))
+      .map((specifier) => `${module.file}: ${specifier}`),
+  );
+}
+
 describe("src/ imports run one way, app → server → ai → core and app → components → core", () => {
   it("reaches every zone the table names", () => {
     const unscanned = Object.keys(FORBIDDEN_ZONE_IMPORTS).filter(
@@ -388,12 +397,7 @@ describe("src/core/ is framework-free and language-model-SDK-free", () => {
   const forbidden = ["next", "react", "react-dom", ...LLM_SDKS];
 
   it.each(forbidden)("imports no %s", (pkg) => {
-    const offenders = modulesIn("src/core").flatMap((module) =>
-      module.specifiers
-        .filter((specifier) => importsPackage(specifier, pkg))
-        .map((specifier) => `${module.file}: ${specifier}`),
-    );
-    expect(offenders).toStrictEqual([]);
+    expect(packageOffenders(modulesIn("src/core"), pkg)).toStrictEqual([]);
   });
 });
 
@@ -403,12 +407,7 @@ describe("src/ai/ outside adapters imports no language-model SDK", () => {
   );
 
   it.each(LLM_SDKS)("imports no %s", (pkg) => {
-    const offenders = nonAdapterModules.flatMap((module) =>
-      module.specifiers
-        .filter((specifier) => importsPackage(specifier, pkg))
-        .map((specifier) => `${module.file}: ${specifier}`),
-    );
-    expect(offenders).toStrictEqual([]);
+    expect(packageOffenders(nonAdapterModules, pkg)).toStrictEqual([]);
   });
 });
 
@@ -455,37 +454,19 @@ describe("src/app/ and src/server/ reach the AI layer only through src/ai/index.
   });
 
   it.each(LLM_SDKS)("imports no %s", (pkg) => {
-    const offenders = modulesIn("src/app", "src/server").flatMap((module) =>
-      module.specifiers
-        .filter((specifier) => importsPackage(specifier, pkg))
-        .map((specifier) => `${module.file}: ${specifier}`),
-    );
-    expect(offenders).toStrictEqual([]);
+    expect(packageOffenders(modulesIn("src/app", "src/server"), pkg)).toStrictEqual([]);
   });
 });
 
 describe("src/components/ is client UI: no language-model SDK, no server-only", () => {
   const componentModules = modulesIn("src/components");
 
-  it.each(LLM_SDKS)("imports no %s", (pkg) => {
-    const offenders = componentModules.flatMap((module) =>
-      module.specifiers
-        .filter((specifier) => importsPackage(specifier, pkg))
-        .map((specifier) => `${module.file}: ${specifier}`),
-    );
-    expect(offenders).toStrictEqual([]);
-  });
-
   // `server-only` throws on import outside a React Server Components graph, so
   // a component carrying it can never be a Client Component — which is the one
-  // thing this zone exists to be able to become.
-  it("imports no server-only marker", () => {
-    const offenders = componentModules.flatMap((module) =>
-      module.specifiers
-        .filter((specifier) => importsPackage(specifier, "server-only"))
-        .map((specifier) => `${module.file}: ${specifier}`),
-    );
-    expect(offenders).toStrictEqual([]);
+  // thing this zone exists to be able to become. Checked alongside the
+  // language-model SDKs, since both are the same "reaches `pkg`" shape.
+  it.each([...LLM_SDKS, "server-only"])("imports no %s", (pkg) => {
+    expect(packageOffenders(componentModules, pkg)).toStrictEqual([]);
   });
 });
 

@@ -10,7 +10,7 @@ import type { ReactElement } from "react";
  */
 export default function NotFound(): ReactElement {
   return (
-    <main className="p-8">
+    <main>
       <h1>Page not found</h1>
       <p>The page you requested does not exist.</p>
       <Link href="/">Return to the home page</Link>
