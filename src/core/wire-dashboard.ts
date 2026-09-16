@@ -39,13 +39,12 @@ export const MAX_DASHBOARD_RECORDS = 10;
  * and `MAX_DASHBOARD_RECORDED_AT_LENGTH` and `MAX_DASHBOARD_RUBRIC_VERSION_LENGTH`
  * bound the two fields this server writes itself, generously enough for
  * either to grow a few characters without becoming a contract change.
- */
-
-/**
- * Equal to `src/core/records.ts`'s {@link MAX_RECORDED_AT_LENGTH}, kept under
- * this module's own name because every other `MAX_DASHBOARD_*` constant here
- * is named for the wire contract it bounds — imported rather than restated so
- * the stored record and this wire contract cannot drift apart.
+ *
+ * This one is equal to `src/core/records.ts`'s {@link MAX_RECORDED_AT_LENGTH},
+ * kept under this module's own name because every other `MAX_DASHBOARD_*`
+ * constant here is named for the wire contract it bounds — imported rather
+ * than restated so the stored record and this wire contract cannot drift
+ * apart.
  */
 export const MAX_DASHBOARD_RECORDED_AT_LENGTH = MAX_RECORDED_AT_LENGTH;
 
