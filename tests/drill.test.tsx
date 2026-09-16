@@ -187,6 +187,20 @@ describe("Drill", () => {
     expect(sendButton).toHaveClass("cursor-pointer");
   });
 
+  it("keeps scoring-only treatment out of the answering state", async () => {
+    stubFetch();
+    await renderDrill(new MapStorage());
+
+    clickStart();
+    typeReply("Sure, I'm free then.");
+
+    expect(screen.getByLabelText("Your reply")).toBeEnabled();
+    expect(
+      screen.queryByRole("status", { name: "Scoring your reply" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("STOPPED", { exact: true })).not.toBeInTheDocument();
+  });
+
   it("keeps Start disabled while questions load and enables it when ready", async () => {
     let resolveQuestions: ((response: Response) => void) | undefined;
     vi.stubGlobal(
@@ -253,14 +267,18 @@ describe("Drill", () => {
     typeReply("Sure, I'm free then.");
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
 
-    expect(screen.getByRole("status", { name: "Scoring reply" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Scoring your reply" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Your reply")).toBeDisabled();
+    expect(screen.getByText("STOPPED", { exact: true })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
 
     resolveScore?.(jsonResponse(200, makeScoreResponse()));
     await flush();
 
     expect(
-      screen.queryByRole("status", { name: "Scoring reply" }),
+      screen.queryByRole("status", { name: "Scoring your reply" }),
     ).not.toBeInTheDocument();
   });
 
@@ -364,7 +382,7 @@ describe("Drill", () => {
       screen.getByText("The scorer did not answer (ERR_LLM_TIMEOUT). Try again."),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("status", { name: "Scoring reply" }),
+      screen.queryByRole("status", { name: "Scoring your reply" }),
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));

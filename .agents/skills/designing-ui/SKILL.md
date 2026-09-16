@@ -107,7 +107,10 @@ single card with three zones separated by hairline rules: a header row with the
 countdown at the left and the scenario line (who is asking, in slate) at the right; the
 body with the question in mono at display size and the textarea below it; a footer with
 the character-light hint at the left and the charcoal Send at the right. Nothing else is
-on the screen — no navigation, no score history, no streak.
+on the screen — no navigation, no score history, no streak. While scoring, lock the
+submitted textarea with a rule-grey fill and slate text, place the shared bordered
+`Scoring your reply` status in the body, and dim the countdown with a mono `STOPPED`
+marker; the answering state has none of those scoring markers.
 
 **Feedback.** Same column and card. The total sits alone at the top as the largest mono
 figure with `/100` in slate at body size, followed by the eight sub-scores as a

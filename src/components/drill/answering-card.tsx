@@ -28,9 +28,9 @@ const URGENT_THRESHOLD_MS = 10_000;
 /**
  * The drill card: countdown and scenario line in the header, the question and
  * the reply textarea in the body, the hint and the one filled action in the
- * footer. Rendered for both `"answering"` and `"scoring"` — the footer action
- * shows a loading indicator plus a disabled `Send` while a request is in
- * flight, and body text plus `Retry` once one has failed.
+ * footer. Rendered for both `"answering"` and `"scoring"` — scoring locks the
+ * submitted reply, puts its loading status in the body, and marks the stopped
+ * countdown; a failed request keeps that locked state and offers `Retry`.
  */
 export function AnsweringCard({
   question,
@@ -44,7 +44,8 @@ export function AnsweringCard({
 }: AnsweringCardProps): ReactElement {
   const hasError = scoreError !== undefined;
   const expired = remainingMs === 0;
-  const urgent = remainingMs > 0 && remainingMs < URGENT_THRESHOLD_MS;
+  const stopped = submitting || hasError;
+  const urgent = !stopped && remainingMs > 0 && remainingMs < URGENT_THRESHOLD_MS;
   const disabled = submitting || hasError;
 
   const footerHint = hasError ? undefined : "Reply in one or two sentences.";
@@ -67,13 +68,16 @@ export function AnsweringCard({
           <span
             className={cn(
               "font-mono font-semibold text-figure",
-              urgent || expired ? "text-status" : "text-ink",
+              stopped ? "text-slate" : urgent || expired ? "text-status" : "text-ink",
             )}
           >
             {formatCountdown(remainingMs)}
           </span>
           {expired ? (
             <span className="font-mono text-micro uppercase text-status">TIME UP</span>
+          ) : null}
+          {stopped ? (
+            <span className="font-mono text-micro uppercase text-slate">STOPPED</span>
           ) : null}
         </div>
         <p className="font-sans text-caption text-slate">{question.scenarioLine}</p>
@@ -91,7 +95,13 @@ export function AnsweringCard({
           rows={3}
           maxLength={MAX_SCORE_ANSWER_LENGTH}
           aria-label="Your reply"
+          className={stopped ? "disabled:bg-rule disabled:text-slate" : undefined}
         />
+        {submitting ? (
+          <div className="flex items-center border border-rule p-3">
+            <LoadingIndicator label="Scoring your reply" />
+          </div>
+        ) : null}
         {hasError ? (
           <p className={BODY_TEXT_CLASS_NAME}>
             {describeApiError(scoreError, "The scorer did not answer")}
@@ -105,10 +115,9 @@ export function AnsweringCard({
           // `w-full`, and without wrapping it sits beside the hint and runs
           // past the viewport instead of dropping onto its own line.
           "flex flex-wrap items-center gap-3",
-          footerHint || submitting ? "justify-between" : "justify-end",
+          footerHint ? "justify-between" : "justify-end",
         )}
       >
-        {submitting ? <LoadingIndicator label="Scoring reply" /> : null}
         {!submitting && footerHint ? (
           <p className="mb-0 font-sans text-caption text-slate">{footerHint}</p>
         ) : null}
