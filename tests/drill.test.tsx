@@ -175,6 +175,58 @@ describe("Drill", () => {
     expect(screen.getByText("Question number 1?")).toBeInTheDocument();
   });
 
+  it("keeps Start disabled while questions load and enables it when ready", async () => {
+    let resolveQuestions: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/questions")) {
+          return new Promise<Response>((resolve) => {
+            resolveQuestions = resolve;
+          });
+        }
+        throw new Error(`unexpected fetch to ${url}`);
+      }),
+    );
+
+    await renderDrill(new MapStorage());
+
+    expect(
+      screen.getByText("One question, a timed reply, then feedback."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start" })).toBeDisabled();
+    expect(
+      screen.getByRole("status", { name: "Loading questions" }),
+    ).toBeInTheDocument();
+
+    resolveQuestions?.(jsonResponse(200, QUESTION_BATCH));
+    await flush();
+
+    expect(screen.getByRole("button", { name: "Start" })).not.toBeDisabled();
+    expect(
+      screen.queryByRole("status", { name: "Loading questions" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows Retry and the queue error when the initial question load fails", async () => {
+    const { questionsMock } = stubFetch();
+    questionsMock.mockReturnValueOnce(
+      jsonResponse(504, {
+        error: {
+          code: "ERR_LLM_TIMEOUT",
+          message: "The model did not answer in time.",
+        },
+      }),
+    );
+    await renderDrill(new MapStorage());
+
+    expect(screen.queryByRole("button", { name: "Start" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(
+      screen.getByText("The question queue did not load (ERR_LLM_TIMEOUT). Try again."),
+    ).toBeInTheDocument();
+  });
+
   it("shows a loading indicator while a reply is being scored", async () => {
     const { scoreMock } = stubFetch();
     let resolveScore: ((response: Response) => void) | undefined;

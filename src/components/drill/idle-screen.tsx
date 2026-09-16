@@ -36,12 +36,15 @@ export function IdleScreen({
   const waiting = status === "loading" || (status === "empty" && error === undefined);
 
   return (
-    <DrillCard>
-      <div className="flex flex-wrap items-center gap-3">
+    <DrillCard className="items-center text-center">
+      <p className="mb-0 w-full font-sans text-body-lg text-(color:--color-body)">
+        One question, a timed reply, then feedback.
+      </p>
+      <div className="flex w-full flex-wrap items-center justify-center gap-3">
         <Button
           onClick={failed ? onRetry : onStart}
           disabled={!failed && status !== "ready"}
-          className="w-full min-[720px]:w-auto"
+          className="min-w-40 w-full min-[720px]:w-auto min-[720px]:px-8 min-[720px]:py-3"
         >
           {failed ? "Retry" : "Start"}
         </Button>
