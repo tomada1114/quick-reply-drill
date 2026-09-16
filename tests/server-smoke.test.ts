@@ -19,6 +19,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 //
 // No browser and no E2E harness, deliberately: `next start` plus `fetch` needs
 // neither, and issue #12's decision to take on neither still stands.
+//
+// The invariant every case below is written to keep: no smoke case ever
+// reaches a model. The server is spawned with `OPENAI_API_KEY: ""`, so every
+// model-backed endpoint answers `ERR_LLM_AUTH` before a socket is opened, and
+// on top of that no case sends a schema-valid body to an endpoint that would
+// otherwise pay for an answer. A case that would need a real key belongs in
+// the issue's manual checklist, not here.
 
 /** The repository root, whose `.next` build `next start` serves. */
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -315,7 +322,14 @@ beforeAll(async () => {
       // production build would otherwise be served under `test` and every
       // `process.env.NODE_ENV === "production"` branch would take a path no
       // deployment takes.
-      env: { ...process.env, NODE_ENV: "production" },
+      // `OPENAI_API_KEY` is blanked rather than merely left unset: Next.js
+      // loads a developer's own `.env` when it starts, and it never overwrites
+      // a variable that is already present in the environment. Setting it to
+      // the empty string is therefore what keeps a real credential on the
+      // machine running this suite out of the server it spawns — the
+      // environment schema reads a blank value as absent, and the adapter
+      // answers `ERR_LLM_AUTH` without opening a socket.
+      env: { ...process.env, NODE_ENV: "production", OPENAI_API_KEY: "" },
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,
     },
@@ -448,5 +462,54 @@ describe("the built application, served by `next start`", () => {
     expect(Object.keys(body)).toStrictEqual(["answer"]);
     expect(typeof body.answer).toBe("string");
     expect(body.answer).not.toBe("");
+  });
+
+  it("refuses POST /api/questions without Sec-Fetch-Site", async () => {
+    const response = await fetch(`${baseUrl}/api/questions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ count: 2 }),
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_FORBIDDEN_ORIGIN" },
+    });
+  });
+
+  it("refuses POST /api/questions with a count outside the accepted range", async () => {
+    const response = await fetch(`${baseUrl}/api/questions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "sec-fetch-site": "same-origin",
+      },
+      body: JSON.stringify({ count: 0 }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_BAD_REQUEST" },
+    });
+  });
+
+  // The case that proves the endpoint is composed at all, and that the guards
+  // above it run in the stated order — for the price of nothing, because the
+  // key the server was spawned with is blank. A 200 here would mean this suite
+  // had just bought a batch of questions from a provider.
+  it("answers POST /api/questions with ERR_LLM_AUTH when no key is configured", async () => {
+    const response = await fetch(`${baseUrl}/api/questions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "sec-fetch-site": "same-origin",
+      },
+      body: JSON.stringify({ count: 2 }),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_LLM_AUTH" },
+    });
   });
 });

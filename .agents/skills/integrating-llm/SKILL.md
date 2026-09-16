@@ -204,9 +204,12 @@ Keeping the port and replacing what answers behind it is the **common** path, an
 a bounded edit rather than a rewrite. Two lines of application code decide it.
 `src/server/composition.ts` chooses the adapter; `src/ai/index.ts` republishes whichever
 adapter the layer is willing to expose. `src/server/env.ts` names the credential, and
-the rest is manifests and gate configs — the dependency, the import restriction, the
-environment example, the automation-test list. A fourth module joining them is the
-moment the choice of vendor has escaped the composition root.
+`src/server/llm-profiles.ts` holds the model and the reasoning effort each use is
+answered with — a Git-managed table rather than an environment variable, because a model
+and an effort are product decisions that belong in a reviewed diff. The rest is
+manifests and gate configs — the dependency, the import restriction, the environment
+example, the automation-test list. A fifth module joining them is the moment the choice
+of vendor has escaped the composition root.
 
 Untouched: `src/ai/port.ts`, `src/ai/errors.ts` and the fake adapter — the whole
 vendor-neutral vocabulary, and the reason the edit is bounded at all — plus the handler,
