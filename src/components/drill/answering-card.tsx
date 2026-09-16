@@ -103,7 +103,10 @@ export function AnsweringCard({
       <DrillDivider />
       <div
         className={cn(
-          "flex items-center gap-3",
+          // `flex-wrap`, as in the idle screen: below 720px the button is
+          // `w-full`, and without wrapping it sits beside the hint and runs
+          // past the viewport instead of dropping onto its own line.
+          "flex flex-wrap items-center gap-3",
           footerHint ? "justify-between" : "justify-end",
         )}
       >
