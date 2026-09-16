@@ -1,0 +1,26 @@
+{
+  "id": "resp_0000000000000000",
+  "created_at": 1750000000,
+  "model": "gpt-5.6-luna",
+  "status": "completed",
+  "output": [
+    {
+      "type": "message",
+      "role": "assistant",
+      "id": "msg_0000000000000000",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"answer\":42,\"confidence\":\"high\"}",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 120,
+    "output_tokens": 48,
+    "total_tokens": 168
+  }
+}

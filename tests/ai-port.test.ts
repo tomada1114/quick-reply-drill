@@ -8,6 +8,7 @@ import {
   type LlmPort,
 } from "../src/ai/index";
 import type { Result } from "../src/core/result";
+import { neverAnsweringFetch, openAiPort, readFixture, stubFetch } from "./openai-stub";
 
 /**
  * The shape every contract case asks a port to fill.
@@ -111,9 +112,9 @@ function ask(
  * to.
  *
  * @remarks
- * Call it once per adapter. The fake is the only adapter this repository ships
- * today; a provider adapter adds its own `describeLlmPortContract(...)` call at
- * the bottom of this file, so the identical assertions run against both and the
+ * Call it once per adapter. Both of this repository's adapters — the fake and
+ * the OpenAI one — add their own `describeLlmPortContract(...)` call at the
+ * bottom of this file, so the identical assertions run against each and the
  * suite is still collected exactly once. It is exported for that reason, and
  * because a vendor adapter may well be measured from its own file.
  */
@@ -299,6 +300,49 @@ describeLlmPortContract("createFakeLlmPort", {
   failsWith: (code) => createFakeLlmPort({ failWith: code }),
   // Far longer than the unit project's 5s budget, so only an abort ends it.
   neverAnswers: () => createFakeLlmPort({ response: CONTRACT_ANSWER, delayMs: 60_000 }),
+});
+
+/**
+ * The port each `LlmErrorCode` is provoked from, for the OpenAI adapter.
+ *
+ * @remarks
+ * Every code comes out of a stubbed response rather than a configuration flag,
+ * which is the whole reason a second implementation is worth measuring: a
+ * failure the adapter cannot produce would be a finding about the mapping, not
+ * a case to skip. `ERR_LLM_TIMEOUT` is the one with no fixture — it is a
+ * property of the connection rather than of a response — so it is arranged from
+ * a transport that never answers under a per-attempt bound of 10ms.
+ */
+function openAiPortFailing(code: LlmErrorCode): LlmPort {
+  switch (code) {
+    case "ERR_LLM_AUTH":
+      return openAiPort(
+        stubFetch({ body: readFixture("error-401"), status: 401 }).fetch,
+      );
+    case "ERR_LLM_RATE_LIMIT":
+      return openAiPort(
+        stubFetch({ body: readFixture("error-429"), status: 429 }).fetch,
+      );
+    case "ERR_LLM_UNAVAILABLE":
+      return openAiPort(
+        stubFetch({ body: readFixture("error-500"), status: 500 }).fetch,
+      );
+    case "ERR_LLM_INVALID_OUTPUT":
+      return openAiPort(stubFetch({ body: readFixture("invalid-output") }).fetch);
+    case "ERR_LLM_TIMEOUT":
+      return openAiPort(neverAnsweringFetch(), { attemptTimeoutMs: 10, maxRetries: 0 });
+  }
+}
+
+describeLlmPortContract("createOpenAiLlmPort", {
+  succeeds: () => openAiPort(stubFetch({ body: readFixture("success") }).fetch),
+  returnsInvalidOutput: () =>
+    openAiPort(stubFetch({ body: readFixture("invalid-output") }).fetch),
+  failsWith: openAiPortFailing,
+  // Far longer than this project's budget, so only the caller's own abort ends
+  // a request — which is what the abort cases need to observe.
+  neverAnswers: () =>
+    openAiPort(neverAnsweringFetch(), { attemptTimeoutMs: 600_000, maxRetries: 0 }),
 });
 
 describe("createFakeLlmPort", () => {
