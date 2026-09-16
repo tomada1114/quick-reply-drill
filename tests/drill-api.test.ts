@@ -8,6 +8,7 @@ import {
 import { CRITERIA, ITEM_IDS } from "../src/core/rubric";
 import {
   MAX_QUESTIONS_PER_BATCH,
+  MAX_SCORE_ANSWER_LENGTH,
   type QuestionsResponse,
   type ScoreRequest,
   type ScoreResponse,
@@ -148,6 +149,19 @@ describe("fetchQuestions", () => {
     expect((error as ApiError).status).toBe(502);
     expect((error as ApiError).code).toBe("ERR_UNKNOWN_RESPONSE");
   });
+
+  it("maps a 2xx body that is not JSON at all to an ApiError, not a raw parse error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("<html>not json</html>", { status: 200 })),
+    );
+
+    const error: unknown = await fetchQuestions(1).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(200);
+    expect((error as ApiError).code).toBe("ERR_UNKNOWN_RESPONSE");
+  });
 });
 
 describe("submitForScoring", () => {
@@ -195,5 +209,42 @@ describe("submitForScoring", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(429);
     expect((error as ApiError).code).toBe("ERR_LLM_RATE_LIMIT");
+  });
+
+  it("rejects a whitespace-only answer before a request is sent", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      submitForScoring({ ...SCORE_REQUEST, answer: "   " }),
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an answer over MAX_SCORE_ANSWER_LENGTH before a request is sent", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      submitForScoring({
+        ...SCORE_REQUEST,
+        answer: "a".repeat(MAX_SCORE_ANSWER_LENGTH + 1),
+      }),
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("trims the answer before sending, matching what the server's schema would trim it to", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, VALID_SCORE));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await submitForScoring({ ...SCORE_REQUEST, answer: "  padded reply  " });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/score",
+      expect.objectContaining({
+        body: JSON.stringify({ ...SCORE_REQUEST, answer: "padded reply" }),
+      }),
+    );
   });
 });

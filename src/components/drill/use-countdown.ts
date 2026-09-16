@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /** How often the remaining time is recomputed while the timer runs. */
 const TICK_MS = 100;
@@ -53,9 +53,14 @@ export function useCountdown({
 
   // Read through a ref so `tick` never needs `onExpire` in its own dependency
   // list — a caller that passes a new function identity on every render must
-  // not retrigger the interval or the listener effect below.
+  // not retrigger the interval or the listener effect below. This assignment
+  // must happen in `useLayoutEffect`, not `useEffect`: a passive effect is
+  // flushed asynchronously after commit, so a 100ms interval tick or a
+  // `visibilitychange` landing in that gap would still read the previous
+  // render's `onExpire` — which closes over that render's now-stale state —
+  // and fire it instead of the latest one.
   const onExpireRef = useRef(onExpire);
-  useEffect(() => {
+  useLayoutEffect(() => {
     onExpireRef.current = onExpire;
   }, [onExpire]);
 

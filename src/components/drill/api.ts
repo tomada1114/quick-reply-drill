@@ -3,6 +3,7 @@ import * as z from "zod";
 import {
   questionsRequestSchema,
   questionsResponseSchema,
+  scoreRequestSchema,
   scoreResponseSchema,
   type QuestionsResponse,
   type ScoreRequest,
@@ -115,7 +116,20 @@ async function postJson<TSchema extends z.ZodType>(
     throw await toApiError(response);
   }
 
-  const json: unknown = await response.json();
+  // A 2xx answer is expected to be JSON, but a proxy, an offline
+  // service-worker fallback, or a rewrite answering 200 with HTML is not.
+  // Route that failure through the same `ApiError` shape as a non-2xx
+  // answer, rather than letting a raw `SyntaxError` escape this module.
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    throw new ApiError(
+      response.status,
+      UNKNOWN_RESPONSE_CODE,
+      "The server returned a success response that was not valid JSON.",
+    );
+  }
   return schema.parse(json);
 }
 
@@ -136,10 +150,21 @@ export async function fetchQuestions(
   return postJson("/api/questions", body, questionsResponseSchema, signal);
 }
 
-/** Submits a reply to `POST /api/score` and parses the graded answer back. */
+/**
+ * Submits a reply to `POST /api/score` and parses the graded answer back.
+ *
+ * @remarks
+ * `body` is validated (and trimmed) against {@link scoreRequestSchema} before
+ * anything is sent, the same way {@link fetchQuestions} validates its own
+ * request: a whitespace-only or over-length answer fails locally instead of
+ * spending a round trip on a request the server would refuse anyway, and
+ * trimming here keeps what is sent identical to what the server's schema
+ * would trim it to.
+ */
 export async function submitForScoring(
   body: ScoreRequest,
   signal?: AbortSignal,
 ): Promise<ScoreResponse> {
-  return postJson("/api/score", body, scoreResponseSchema, signal);
+  const parsedBody = scoreRequestSchema.parse(body);
+  return postJson("/api/score", parsedBody, scoreResponseSchema, signal);
 }

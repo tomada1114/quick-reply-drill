@@ -20,24 +20,28 @@ export interface UseQuestionQueueOptions {
 }
 
 /** Where the queue is in its lifecycle. */
-export type QuestionQueueStatus = "loading" | "ready" | "error";
+export type QuestionQueueStatus = "loading" | "ready" | "empty" | "error";
+
+/** The phases stored in state; `"empty"` is a derived fact about `"ready"`
+ * (computed in this hook's return), not something to sync via an effect. */
+type InternalStatus = Exclude<QuestionQueueStatus, "empty">;
 
 export interface UseQuestionQueueResult {
   /** The question a screen should show now, or `undefined` before the first
-   * batch has loaded. */
+   * batch has loaded, or once the queue has drained (`status: "empty"`). */
   readonly current: WireQuestion | undefined;
 
   /** Drops `current` and moves to the next queued question. */
   readonly advance: () => void;
 
-  /** `"loading"` until the first batch resolves, then `"ready"` or `"error"`. */
+  /** `"loading"` until the first batch resolves, then `"ready"`. `"empty"` is
+   * `"ready"`'s sibling for a drained queue, using the same `error`/`retry()`
+   * vocabulary, so a screen need not render blank. */
   readonly status: QuestionQueueStatus;
 
-  /**
-   * The most recent fetch failure, or `undefined`. Set on an initial-load
-   * failure (alongside `status: "error"`) and on a refill failure (with
-   * `status` left at `"ready"` and `current` untouched) alike.
-   */
+  /** The most recent fetch failure, or `undefined`; set on an initial-load
+   * failure (`status: "error"`) and on a refill failure (`status`/`current`
+   * untouched) alike. */
   readonly error: unknown;
 
   /** Retries the initial load if it failed, or a failed refill otherwise. */
@@ -54,13 +58,15 @@ const DEFAULT_REFILL_BELOW = 2;
  * @remarks
  * The initial fetch and a refill are deliberately different failure modes.
  * An initial-load failure leaves the queue empty, so `status` becomes
- * `"error"` and `retry()` repeats that same fetch. A refill failure happens
- * while a question the learner already has is still on screen, so it must
- * not disturb `current` or the queue behind it — only `error` is set, and
- * `status` stays `"ready"`; `retry()` in that state repeats the refill
- * instead. Concurrent refills are coalesced through `refillingRef`, since
- * `advance()` can cross the `refillBelow` line more than once before the
- * first request resolves.
+ * `"error"` and `retry()` repeats that fetch. A refill failure happens while
+ * a question the learner already has is on screen, so it leaves `current`
+ * and the queue untouched — only `error` is set, and internal `status` stays
+ * `"ready"` (reported as `"empty"` once the queue is actually drained);
+ * `retry()` there repeats the refill instead. Concurrent refills are
+ * coalesced through `refillingRef`, since `advance()` can cross
+ * `refillBelow` more than once before the first request resolves; `retry()`
+ * still clears a stale `error` even when that coalescing makes it a no-op,
+ * so a press during an in-flight refill is never silently dropped.
  */
 export function useQuestionQueue({
   fetchQuestions,
@@ -68,7 +74,7 @@ export function useQuestionQueue({
   refillBelow = DEFAULT_REFILL_BELOW,
 }: UseQuestionQueueOptions): UseQuestionQueueResult {
   const [queue, setQueue] = useState<readonly WireQuestion[]>([]);
-  const [status, setStatus] = useState<QuestionQueueStatus>("loading");
+  const [status, setStatus] = useState<InternalStatus>("loading");
   const [error, setError] = useState<unknown>(undefined);
 
   // Read through a ref so a caller passing a new `fetchQuestions` identity on
@@ -153,14 +159,16 @@ export function useQuestionQueue({
     initialControllerRef.current = controller;
     startInitialFetch(controller);
     return () => {
-      controller.abort();
+      // Through the ref, not the closed-over `controller`: `retry()` can install a
+      // new one here, and it is that in-flight request an unmount must abort.
+      initialControllerRef.current?.abort();
       refillControllerRef.current?.abort();
     };
   }, [startInitialFetch]);
 
   // A side effect belongs here, not inside `setQueue`'s updater: React may
-  // invoke that updater more than once for the same commit, and a refill
-  // fetch must run at most once per crossing of `refillBelow`.
+  // invoke that updater more than once per commit. `refillBelow` is always
+  // at least 1, so this already covers the queue draining to 0.
   useEffect(() => {
     if (status === "ready" && queue.length < refillBelow) {
       refill();
@@ -175,6 +183,9 @@ export function useQuestionQueue({
     if (status === "error") {
       loadInitial();
     } else {
+      // `refillingRef` coalesces `refill()` below into a no-op when one is
+      // already in flight; clearing `error` still makes the press visible.
+      setError(undefined);
       refill();
     }
   }, [status, loadInitial, refill]);
@@ -182,7 +193,7 @@ export function useQuestionQueue({
   return {
     current: queue[0],
     advance,
-    status,
+    status: status === "ready" && queue.length === 0 ? "empty" : status,
     error,
     retry,
   };

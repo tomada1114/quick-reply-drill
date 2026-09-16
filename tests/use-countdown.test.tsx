@@ -130,6 +130,33 @@ describe("useCountdown", () => {
     expect(onExpire).toHaveBeenCalledTimes(2);
   });
 
+  it("fires the onExpire from the latest render, not a stale one from before a re-render", () => {
+    const onExpireCalls: string[] = [];
+    const { result, rerender } = renderHook(
+      ({ tag }: { tag: string }) =>
+        useCountdown({
+          durationMs: 30_000,
+          onExpire: () => onExpireCalls.push(tag),
+        }),
+      { initialProps: { tag: "first" } },
+    );
+
+    act(() => {
+      result.current.start();
+    });
+
+    // A re-render swaps in a new `onExpire` closure (as a caller re-rendering
+    // with fresh state on every keystroke would) before the deadline is
+    // reached.
+    rerender({ tag: "second" });
+
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+
+    expect(onExpireCalls).toEqual(["second"]);
+  });
+
   it("clears the interval on unmount", () => {
     const onExpire = vi.fn();
     const { result, unmount } = renderHook(() =>
