@@ -1,3 +1,4 @@
+import type { LlmError, LlmErrorCode } from "../ai/index";
 import { err, ok, type Result } from "../core/result";
 
 /**
@@ -31,6 +32,35 @@ export function failure(
   headers: HeadersInit = {},
 ): Response {
   return Response.json({ error: { code, message } }, { status, headers });
+}
+
+// The HTTP status each port failure is reported as. `satisfies` keeps the
+// literal keys, so a new `LlmErrorCode` member fails this object to compile
+// rather than falling through to a default status. `ERR_LLM_AUTH` is a 500 on
+// purpose: the credential that failed is the server's, not the caller's.
+const STATUS_BY_LLM_CODE = {
+  ERR_LLM_AUTH: 500,
+  ERR_LLM_RATE_LIMIT: 429,
+  ERR_LLM_TIMEOUT: 504,
+  ERR_LLM_INVALID_OUTPUT: 502,
+  ERR_LLM_UNAVAILABLE: 503,
+} as const satisfies Record<LlmErrorCode, number>;
+
+/**
+ * The answer a failed `LlmPort.generate` becomes, for every handler alike.
+ *
+ * @remarks
+ * Shared rather than restated per handler, so two endpoints cannot report one
+ * port failure as two different statuses. The prose is fixed: an `LlmError`'s
+ * own message may name what the provider said, and a handler is where that
+ * would reach a client.
+ */
+export function llmFailure(error: LlmError): Response {
+  return failure(
+    STATUS_BY_LLM_CODE[error.code],
+    error.code,
+    "The language model could not answer this request.",
+  );
 }
 
 /**

@@ -56,8 +56,16 @@ export interface OpenAiLlmPortOptions {
   /** Retries after the first attempt. Defaults to 1. */
   readonly maxRetries?: number;
 
-  /** The transport, substituted in a test. Defaults to the runtime's `fetch`. */
-  readonly fetch?: typeof fetch;
+  /**
+   * The transport, substituted in a test. Defaults to the runtime's `fetch`.
+   *
+   * @remarks
+   * `| undefined` is explicit because `exactOptionalPropertyTypes` is on:
+   * without it, a caller that builds several ports from one table could not
+   * write `fetch: undefined` to say "the runtime's own", which is what
+   * `src/server/composition.ts` does.
+   */
+  readonly fetch?: typeof fetch | undefined;
 }
 
 /**
