@@ -25,7 +25,7 @@ const ALL_DESCRIPTORS = ITEM_IDS.flatMap((id) =>
 const INPUT = {
   question: "Can you get the draft over before Friday?",
   scenarioLine: "Your manager, in a work chat",
-  answer: "Yes I send it tomorow morning.",
+  answer: "Yes I send it tomorrow morning.",
 } as const;
 
 /** A JSON Schema node, walked without knowing which keywords it carries. */
@@ -199,7 +199,7 @@ describe("buildScoringRequest", () => {
       [
         "Scenario: Your manager, in a work chat",
         "Question: Can you get the draft over before Friday?",
-        "Reply: Yes I send it tomorow morning.",
+        "Reply: Yes I send it tomorrow morning.",
       ].join("\n"),
     );
   });
