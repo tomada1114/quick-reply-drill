@@ -370,7 +370,7 @@ describe("the POST /api/dashboard request body", () => {
       "a comment at its ceiling",
       {
         comments: {
-          clarity: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH),
+          conversation: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH),
           accuracy: "x",
           vocabulary: "x",
           appropriateness: "x",
@@ -430,7 +430,7 @@ describe("the POST /api/dashboard request body", () => {
       "a comment over its ceiling",
       {
         comments: {
-          clarity: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH + 1),
+          conversation: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH + 1),
           accuracy: "x",
           vocabulary: "x",
           appropriateness: "x",

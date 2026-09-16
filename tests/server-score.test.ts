@@ -206,7 +206,7 @@ describe("POST /api/score", () => {
     );
 
     expect(seen).toHaveLength(1);
-    expect(seen[0]?.instructions).toContain("Answers the question");
+    expect(seen[0]?.instructions).toContain("Responds to the partner");
     expect(seen[0]?.prompt).toContain(INPUT.answer);
     expect(seen[0]?.instructions).not.toContain(INPUT.answer);
   });
@@ -478,7 +478,7 @@ describe("POST /api/score", () => {
           },
           comments: {
             ...GRADED.comments,
-            clarity: "a".repeat(MAX_GRADER_PROSE_LENGTH + 50),
+            conversation: "a".repeat(MAX_GRADER_PROSE_LENGTH + 50),
           },
         },
       }),
@@ -488,7 +488,7 @@ describe("POST /api/score", () => {
     const answer = scoreResponseSchema.parse(await response.json());
 
     expect(answer.items.grammar.rationale).toHaveLength(MAX_GRADER_PROSE_LENGTH);
-    expect(answer.comments.clarity).toHaveLength(MAX_GRADER_PROSE_LENGTH);
+    expect(answer.comments.conversation).toHaveLength(MAX_GRADER_PROSE_LENGTH);
     // Every other field is passed through unchanged, not merely the two cut —
     // both are `GRADED`'s own values, shared by every item and every comment.
     expect(answer.items.chatForm.rationale).toBe("Concrete reason.");

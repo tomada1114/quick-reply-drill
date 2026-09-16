@@ -42,7 +42,7 @@ function makeRecord(overrides: Record<string, unknown> = {}): unknown {
     scores: makeScores(),
     rationales: makeRationales(),
     comments: {
-      clarity: "Clear and direct.",
+      conversation: "Keeps the conversation moving.",
       accuracy: "No grammar issues.",
       vocabulary: "Natural word choice.",
       appropriateness: "Right register for a coworker.",
@@ -74,7 +74,7 @@ describe("drillRecordSchema", () => {
   });
 
   it("rejects a score of 6", () => {
-    const record = makeRecord({ scores: { ...makeScores(), answersQuestion: 6 } });
+    const record = makeRecord({ scores: { ...makeScores(), respondsToPartner: 6 } });
 
     expect(drillRecordSchema.safeParse(record).success).toBe(false);
   });
@@ -87,7 +87,7 @@ describe("drillRecordSchema", () => {
 
   it("rejects a scores object missing one of the eight items", () => {
     const scores = makeScores() as Record<string, Score>;
-    delete scores["answersQuestion"];
+    delete scores["respondsToPartner"];
 
     expect(drillRecordSchema.safeParse(makeRecord({ scores })).success).toBe(false);
   });
@@ -110,7 +110,7 @@ describe("drillRecordSchema", () => {
 
   it("does not accept, and does not require, a stored criterion score or total", () => {
     const record = makeRecord({
-      criterionScores: { clarity: 10 },
+      criterionScores: { conversation: 10 },
       total: 90,
     }) as Record<string, unknown>;
     const result = drillRecordSchema.safeParse(record);

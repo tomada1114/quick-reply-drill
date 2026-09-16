@@ -11,8 +11,8 @@ import { ITEM_IDS, type Score } from "../src/core/rubric";
 
 function sheetWith(score: Score): ScoreSheet {
   return {
-    answersQuestion: score,
-    intentClear: score,
+    respondsToPartner: score,
+    keepsItGoing: score,
     grammar: score,
     spellingPunctuation: score,
     wordChoice: score,
@@ -32,8 +32,8 @@ function sheetWithOverrides(overrides: Partial<ScoreSheet>): ScoreSheet {
 describe("criterionScores", () => {
   it("sums each criterion's two item scores on a 0–10 scale", () => {
     const sheet: ScoreSheet = {
-      answersQuestion: 5,
-      intentClear: 2,
+      respondsToPartner: 5,
+      keepsItGoing: 2,
       grammar: 4,
       spellingPunctuation: 1,
       wordChoice: 3,
@@ -43,7 +43,7 @@ describe("criterionScores", () => {
     };
 
     expect(criterionScores(sheet)).toStrictEqual({
-      clarity: 7,
+      conversation: 7,
       accuracy: 5,
       vocabulary: 3,
       appropriateness: 7,
@@ -61,12 +61,12 @@ describe("totalScore", () => {
   });
 
   it("rounds a single five-point item to 13 under equal weights", () => {
-    expect(totalScore(sheetWithOverrides({ answersQuestion: 5 }))).toBe(13);
+    expect(totalScore(sheetWithOverrides({ respondsToPartner: 5 }))).toBe(13);
   });
 
   it("respects custom criterion weights", () => {
     const weights: CriterionWeights = {
-      clarity: 0,
+      conversation: 0,
       accuracy: 100,
       vocabulary: 0,
       appropriateness: 0,

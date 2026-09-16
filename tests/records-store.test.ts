@@ -52,7 +52,7 @@ function makeRecord(id: string) {
     scores,
     rationales,
     comments: {
-      clarity: "Clear and direct.",
+      conversation: "Keeps the conversation moving.",
       accuracy: "No grammar issues.",
       vocabulary: "Natural word choice.",
       appropriateness: "Right register for a coworker.",

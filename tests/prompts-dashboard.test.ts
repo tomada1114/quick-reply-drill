@@ -89,6 +89,10 @@ describe("buildDashboardRequest", () => {
     const request = buildDashboardRequest([record()]);
 
     expect(request.instructions).toContain("120 to 200 words");
+    expect(request.instructions).toContain(
+      "criteria below: conversation, accuracy, vocabulary, and appropriateness",
+    );
+    expect(request.instructions).not.toContain("criteria below: clarity");
     for (const criterion of CRITERIA) {
       expect(request.instructions).toContain(criterion.id);
     }

@@ -42,7 +42,7 @@ export function buildScoredRecord(
       ITEM_IDS.map((itemId) => [itemId, response.items[itemId].rationale]),
     ) as Record<(typeof ITEM_IDS)[number], string>,
     comments: {
-      clarity: response.comments.clarity,
+      conversation: response.comments.conversation,
       accuracy: response.comments.accuracy,
       vocabulary: response.comments.vocabulary,
       appropriateness: response.comments.appropriateness,

@@ -31,7 +31,12 @@ function makeRecord(id: string, recordedAt: string, level: Score): DrillRecord {
     elapsedMs: 1000,
     scores,
     rationales,
-    comments: { clarity: "", accuracy: "", vocabulary: "", appropriateness: "" },
+    comments: {
+      conversation: "",
+      accuracy: "",
+      vocabulary: "",
+      appropriateness: "",
+    },
     modelReply: "Yes.",
     model: { alias: "gpt-5-mini", reasoningEffort: "low" },
     rubricVersion: "2026-09.2",

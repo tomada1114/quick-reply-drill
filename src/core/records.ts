@@ -110,7 +110,7 @@ export const drillRecordSchema = z.object({
   rationales: exactByItemId(z.string()),
   /** One short comment per criterion. */
   comments: z.object({
-    clarity: z.string(),
+    conversation: z.string(),
     accuracy: z.string(),
     vocabulary: z.string(),
     appropriateness: z.string(),
