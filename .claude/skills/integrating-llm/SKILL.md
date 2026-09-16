@@ -215,7 +215,9 @@ Untouched: `src/ai/port.ts`, `src/ai/errors.ts` and the fake adapter — the who
 vendor-neutral vocabulary, and the reason the edit is bounded at all — plus the handler,
 which only ever sees an `LlmPort`, and everything above it.
 
-`tests/ai-vendor-swap.test.ts` used to write that bound down and check it. It was
-deleted with the adapter, because every assertion in it was keyed to a vendor that is no
-longer named anywhere. Re-create it with the first provider adapter; until then this
-section is prose a reviewer applies rather than a gate.
+`tests/ai-vendor-swap.test.ts` writes that bound down again and checks it: an exact
+match between every file that names a vendor-shaped needle and the list above of where
+one may legitimately appear, so a vendor spilling into a sixth module and a listed file
+that stopped naming one both fail it. It was deleted once already, when the Anthropic
+adapter left and every assertion in it was keyed to a vendor no longer named anywhere —
+re-run it before trusting this section again after the next vendor swap.
