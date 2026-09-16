@@ -56,7 +56,10 @@ function capturing(inner: LlmPort, seen: CapturedRequest[]): LlmPort {
 function postRequest(body: string, init: RequestInit = {}): Request {
   return new Request(ENDPOINT, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "sec-fetch-site": "same-origin",
+    },
     body,
     ...init,
   });
@@ -90,7 +93,10 @@ function postRequestThatFailsMidBody(): Request {
   });
   const init: StreamingRequestInit = {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "sec-fetch-site": "same-origin",
+    },
     body: stream,
     duplex: "half",
   };
@@ -251,7 +257,12 @@ describe("the ask handler", () => {
   it("rejects a request that carries no body at all", async () => {
     const handler = createAskHandler({ llm: createFakeLlmPort({ response: ANSWER }) });
 
-    const response = await handler(new Request(ENDPOINT, { method: "POST" }));
+    const response = await handler(
+      new Request(ENDPOINT, {
+        method: "POST",
+        headers: { "sec-fetch-site": "same-origin" },
+      }),
+    );
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
@@ -333,7 +344,11 @@ describe("the ask handler", () => {
 
     const response = await handler(
       postRequest(bodyOfBytes(MAX_REQUEST_BODY_BYTES + 1), {
-        headers: { "content-type": "application/json", "content-length": "12" },
+        headers: {
+          "content-type": "application/json",
+          "content-length": "12",
+          "sec-fetch-site": "same-origin",
+        },
       }),
     );
 
@@ -378,15 +393,7 @@ describe("the ask handler", () => {
   });
 });
 
-// `src/server/env.ts` makes `API_ACCESS_KEY` mandatory as soon as a billed
-// provider credential is configured, so this is what a deployed app that pays
-// for its answers actually runs. What each case has to show is not only the
-// status but that the port was never reached: an endpoint that rejects a
-// request *after* spending money on it has protected nothing.
-describe("the ask handler with an access key configured", () => {
-  const ACCESS_KEY = "an-example-access-key";
-
-  /** The handler and the record of everything the port was asked. */
+describe("the ask handler's same-origin guard", () => {
   function guarded(): {
     handler: (request: Request) => Promise<Response>;
     seen: CapturedRequest[];
@@ -395,78 +402,76 @@ describe("the ask handler with an access key configured", () => {
     return {
       handler: createAskHandler({
         llm: capturing(createFakeLlmPort({ response: ANSWER }), seen),
-        accessKey: ACCESS_KEY,
       }),
       seen,
     };
   }
 
-  /** A well-formed `POST` carrying `authorization` verbatim, or none at all. */
-  function askWith(authorization?: string): Request {
-    return postRequest(
-      JSON.stringify({ prompt: "Which city was the old capital?" }),
-      authorization === undefined ? {} : { headers: { authorization } },
-    );
+  function withoutFetchMetadata(value?: string): Request {
+    return postRequest(JSON.stringify({ prompt: "Which city was the old capital?" }), {
+      headers:
+        value === undefined
+          ? { "content-type": "application/json" }
+          : { "content-type": "application/json", "sec-fetch-site": value },
+    });
   }
 
-  // RFC 9110 §11.1 makes the auth-scheme token case-insensitive, and a client,
-  // a proxy or a gateway may normalise it, so the spelling a caller sends must
-  // not decide whether the correct key is accepted.
-  it.each([
-    ["Bearer", `Bearer ${ACCESS_KEY}`],
-    ["bearer", `bearer ${ACCESS_KEY}`],
-    ["BEARER", `BEARER ${ACCESS_KEY}`],
-  ])(
-    "answers a request carrying the configured key under the %s scheme",
-    async (_label, authorization) => {
-      const { handler, seen } = guarded();
-
-      const response = await handler(askWith(authorization));
-
-      expect(response.status).toBe(200);
-      await expect(response.json()).resolves.toStrictEqual(ANSWER);
-      expect(seen).toHaveLength(1);
-    },
-  );
-
-  it.each([
-    ["no Authorization header", undefined],
-    ["an empty Authorization header", ""],
-    ["a wrong key", "Bearer not-the-configured-key"],
-    ["the right key under the wrong scheme", `Basic ${ACCESS_KEY}`],
-    ["the key with no scheme", ACCESS_KEY],
-    ["a bearer prefix and nothing after it", "Bearer "],
-    ["a prefix of the key", `Bearer ${ACCESS_KEY.slice(0, -1)}`],
-    ["the key with something appended", `Bearer ${ACCESS_KEY}x`],
-  ])("rejects %s without reaching the port", async (_label, authorization) => {
+  it("rejects a request with no Sec-Fetch-Site header", async () => {
     const { handler, seen } = guarded();
 
-    const response = await handler(askWith(authorization));
+    const response = await handler(withoutFetchMetadata());
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(403);
     await expect(response.json()).resolves.toStrictEqual({
       error: {
-        code: "ERR_UNAUTHORIZED",
-        message: "This endpoint requires a valid access key.",
+        code: "ERR_FORBIDDEN_ORIGIN",
+        message: "This endpoint answers same-origin browser requests only.",
       },
     });
     expect(seen).toStrictEqual([]);
   });
 
-  it("challenges with the scheme a caller has to use", async () => {
-    const { handler } = guarded();
+  it.each(["cross-site", "same-site"] as const)(
+    "rejects a %s request",
+    async (site) => {
+      const { handler, seen } = guarded();
 
-    const response = await handler(askWith());
+      const response = await handler(withoutFetchMetadata(site));
 
-    expect(response.headers.get("www-authenticate")).toBe("Bearer");
-  });
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "ERR_FORBIDDEN_ORIGIN" },
+      });
+      expect(seen).toStrictEqual([]);
+    },
+  );
 
-  it("rejects before validating the body, so an anonymous caller learns nothing", async () => {
+  it("accepts same-origin case-insensitively", async () => {
     const { handler, seen } = guarded();
 
-    const response = await handler(postRequest("not json at all"));
+    const response = await handler(withoutFetchMetadata("SaMe-OrIgIn"));
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toStrictEqual(ANSWER);
+    expect(seen).toHaveLength(1);
+  });
+
+  // The guard has to run before body parsing: a request that would otherwise
+  // be refused as too large is an origin failure when the caller is not the
+  // page this server serves.
+  it("rejects before reading an oversized body", async () => {
+    const { handler, seen } = guarded();
+
+    const response = await handler(
+      postRequest(bodyOfBytes(MAX_REQUEST_BODY_BYTES + 1), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_FORBIDDEN_ORIGIN" },
+    });
     expect(seen).toStrictEqual([]);
   });
 });
@@ -479,15 +484,14 @@ describe("the composed /api/ask route", () => {
   // Pins the answer envelope the route replies with, against the real
   // composition rather than against a handler this test builds itself, and
   // with the environment stubbed rather than read: what `askHandler` does
-  // turns on the `API_ACCESS_KEY` the developer's shell happens to hold at
-  // module load, so a case that used the static import would be asserting on
-  // the ambient environment. The body is matched by shape, not by wording --
+  // reads the environment at module load, so a case that used the static import
+  // would be asserting on the ambient environment. The body is matched by shape,
+  // not by wording --
   // which adapter composition.ts wires is its own decision to change, but
   // that the reply is `{answer: <string>}` and not an error envelope is not.
   it("answers a well-formed request with the answer envelope", async () => {
     const composed = await composedWith({
       OPENAI_API_KEY: undefined,
-      API_ACCESS_KEY: undefined,
     });
 
     const response = await composed(
@@ -526,13 +530,11 @@ describe("the composed /api/ask route", () => {
   }
 
   // Pins the promise README.md and AGENTS.md both make: a fresh checkout with
-  // no OPENAI_API_KEY still answers instead of surfacing ERR_LLM_AUTH as a
-  // 500 (#77), and with no API_ACCESS_KEY it answers an anonymous caller rather
-  // than a 401 (#82).
-  it("answers 200 with no credential of either kind configured", async () => {
+  // no OPENAI_API_KEY still answers instead of surfacing ERR_LLM_AUTH as a 500
+  // (#77).
+  it("answers 200 with no provider credential configured", async () => {
     const composed = await composedWith({
       OPENAI_API_KEY: undefined,
-      API_ACCESS_KEY: undefined,
     });
 
     const response = await composed(
@@ -550,7 +552,6 @@ describe("the composed /api/ask route", () => {
   it("answers 200 while the fake adapter is wired, whatever provider credential is exported", async () => {
     const composed = await composedWith({
       OPENAI_API_KEY: "an-example-value",
-      API_ACCESS_KEY: undefined,
     });
 
     const response = await composed(

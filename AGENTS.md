@@ -37,7 +37,7 @@ Corepack.
 ## Quick reference
 
 ```sh
-pnpm dev           # start the Next.js development server on http://localhost:3000
+pnpm dev           # start the Next.js development server on http://127.0.0.1:3000
 pnpm build         # production build; also type-checks the App Router entry points
 pnpm start         # serve the production build from `pnpm build`
 pnpm check:quick   # format check, lint, typecheck, tests — the everyday gate
@@ -136,10 +136,11 @@ vendor. That choice made anywhere else is the leak these boundaries exist to pre
 
 This template deliberately implements neither rate limiting nor concurrency limiting for
 `POST /api/ask`. It owns no limiter state, store, algorithm, or rate-limit environment
-variable. A deployment that wires a billed adapter must enforce its caller-throughput
-policy at an edge or gateway before the request reaches the app, with enforcement shared
-across instances; a per-process limiter is not equivalent across instances.
-`API_ACCESS_KEY` is authentication only, not a rate-limit declaration.
+variable. The endpoint does reject a request without the browser's
+`Sec-Fetch-Site: same-origin` header, and `dev`/`start` bind to `127.0.0.1`; that is a
+CSRF-grade guard plus a local network boundary, not authentication. A deployed app must
+put access control and shared caller-throughput enforcement at an edge or gateway before
+the request reaches the app; a per-process limiter is not equivalent across instances.
 
 The app still owns its existing per-request request-body and prompt ceilings and rejects
 those before `llm.generate`.
