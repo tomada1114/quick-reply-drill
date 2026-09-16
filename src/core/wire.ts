@@ -117,6 +117,8 @@ export const scoreRequestSchema = z.object({
 
 /** One item's verdict: the reasoning first, then the level it justifies. */
 const scoreItem = z.object({
+  // No `.max()` — `maxLength` is unguaranteed under strict mode, see `score`
+  // below. Bounded by truncation instead, in `scoring.ts`'s `MAX_GRADER_PROSE_LENGTH`.
   rationale: z.string(),
   // `z.literal` of the six levels converts to a numeric `enum`, which the
   // provider's strict JSON Schema mode accepts. A `.min()`/`.max()` pair would

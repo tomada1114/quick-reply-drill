@@ -59,7 +59,7 @@ describe("the fixed rubric", () => {
   });
 
   it("pins the version that makes stored scores comparable", () => {
-    expect(RUBRIC_VERSION).toBe("2026-09.1");
+    expect(RUBRIC_VERSION).toBe("2026-09.2");
   });
 
   it("keeps ItemId closed over the eight table items", () => {
