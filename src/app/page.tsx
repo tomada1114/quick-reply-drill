@@ -1,28 +1,19 @@
 import type { ReactElement } from "react";
 
+import { Drill } from "@/components/drill/drill";
+
 /**
- * The placeholder this repository serves until the drill screen exists.
+ * The one page this application ships: the drill loop `<Drill />` renders,
+ * `idle → answering → scoring → feedback`.
  *
  * @remarks
- * It is deliberately the smallest page that proves the App Router tree is
- * wired: `tests/server-smoke.test.ts` serves the build and asks for it over
- * HTTP, which is the only check that sees a page at all.
- *
- * The page's padding is a Tailwind utility applied once on `<body>` in
- * `src/app/layout.tsx` rather than a rule in `globals.css`, which is what
- * makes `tests/server-smoke.test.ts`'s stylesheet assertion a real check: it
- * fetches the built CSS and looks for this class, so a broken PostCSS
- * pipeline fails the suite instead of rendering an unstyled page nobody
- * looks at.
+ * This stays a Server Component — `<Drill />` is the smallest file that
+ * actually needs `"use client"` (state, a countdown, `localStorage`), per
+ * `building-app-routes`. The title and the one-line description that used to
+ * render here now live solely in `src/app/layout.tsx`'s `metadata` export;
+ * the drill and feedback screens the lock describes carry no page title of
+ * their own — "Nothing else is on the screen" — so nothing here restates it.
  */
 export default function HomePage(): ReactElement {
-  return (
-    <main>
-      <h1>Quick Reply Drill</h1>
-      <p>
-        Answer a one-line English question in thirty seconds, and get it scored the same
-        way every time.
-      </p>
-    </main>
-  );
+  return <Drill />;
 }
