@@ -1,7 +1,7 @@
 import * as z from "zod";
 
-import type { LlmErrorCode, LlmPort } from "../../ai/index";
-import { failure, readJsonBody, rejectCrossOrigin } from "../http";
+import type { LlmPort } from "../../ai/index";
+import { failure, llmFailure, readJsonBody, rejectCrossOrigin } from "../http";
 
 /**
  * What the handler needs from the outside world.
@@ -53,24 +53,6 @@ const askAnswerSchema = z.object({
 });
 
 /**
- * The HTTP status each port failure is reported as.
- *
- * @remarks
- * `satisfies` rather than an annotation: it keeps the literal keys, so adding a
- * member to `LlmErrorCode` fails this object to compile instead of silently
- * falling through to a default status. `ERR_LLM_AUTH` maps to 500 on purpose —
- * the credential that failed is the server's, so the caller did nothing wrong
- * and has nothing to fix by retrying with different input.
- */
-const STATUS_BY_LLM_CODE = {
-  ERR_LLM_AUTH: 500,
-  ERR_LLM_RATE_LIMIT: 429,
-  ERR_LLM_TIMEOUT: 504,
-  ERR_LLM_INVALID_OUTPUT: 502,
-  ERR_LLM_UNAVAILABLE: 503,
-} as const satisfies Record<LlmErrorCode, number>;
-
-/**
  * Builds the `POST /api/ask` handler over the port it is given.
  *
  * @remarks
@@ -119,11 +101,7 @@ export function createAskHandler(
     });
 
     if (!result.ok) {
-      return failure(
-        STATUS_BY_LLM_CODE[result.error.code],
-        result.error.code,
-        "The language model could not answer this request.",
-      );
+      return llmFailure(result.error);
     }
 
     return Response.json(result.value, { status: 200 });

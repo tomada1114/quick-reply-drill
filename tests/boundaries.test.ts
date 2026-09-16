@@ -175,6 +175,7 @@ describe("the import scanner the zone assertions run on", () => {
     ],
     ["src/server/handlers/ask.ts", ["zod", "../../ai/index", "../http"]],
     ["src/app/api/ask/route.ts", ["../../../server/composition"]],
+    ["src/app/api/questions/route.ts", ["../../../server/composition"]],
   ])("reads %s as %p", (file, expected) => {
     const module = sourceModules.find((candidate) => candidate.file === file);
     expect(module?.specifiers).toStrictEqual(expected);
