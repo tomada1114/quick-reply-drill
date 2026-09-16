@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
-import { fetchDashboardSummary } from "@/components/drill/api";
-import { describeApiError } from "@/components/drill/format";
+import { fetchDashboardSummary } from "@/components/shared/api";
+import { describeApiError } from "@/components/shared/format";
 import { Button } from "@/components/ui/button";
 import type { DrillRecord } from "@/core/records";
 

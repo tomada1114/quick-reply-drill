@@ -1,9 +1,9 @@
 import type { ReactElement } from "react";
 
+import { DrillCard } from "@/components/shared/card";
+import { describeApiError } from "@/components/shared/format";
 import { Button } from "@/components/ui/button";
 
-import { DrillCard } from "./card";
-import { describeApiError } from "./format";
 import type { QuestionQueueStatus } from "./use-question-queue";
 
 interface IdleScreenProps {

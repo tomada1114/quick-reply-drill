@@ -1,12 +1,13 @@
 import type { ChangeEvent, ReactElement } from "react";
 
+import { cn } from "@/components/lib/utils";
+import { DrillCard, DrillDivider } from "@/components/shared/card";
+import { BODY_TEXT_CLASS_NAME, describeApiError } from "@/components/shared/format";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/components/lib/utils";
 import { MAX_SCORE_ANSWER_LENGTH, type WireQuestion } from "@/core/wire";
 
-import { DrillCard, DrillDivider } from "./card";
-import { BODY_TEXT_CLASS_NAME, describeApiError, formatCountdown } from "./format";
+import { formatCountdown } from "./format";
 
 interface AnsweringCardProps {
   readonly question: WireQuestion;

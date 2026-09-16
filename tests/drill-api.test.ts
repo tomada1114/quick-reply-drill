@@ -5,7 +5,7 @@ import {
   fetchDashboardSummary,
   fetchQuestions,
   submitForScoring,
-} from "../src/components/drill/api";
+} from "../src/components/shared/api";
 import { CRITERIA, ITEM_IDS } from "../src/core/rubric";
 import {
   MAX_DASHBOARD_RECORDS,

@@ -1,52 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { QuestionsResponse, WireQuestion } from "@/core/wire";
+import type { WireQuestion } from "@/core/wire";
 
-/** The shape `fetchQuestions` from `./api` has — taken as a value, not an import. */
-export type FetchQuestions = (
-  count: number,
-  signal?: AbortSignal,
-) => Promise<QuestionsResponse>;
+import type {
+  QuestionQueueStatus,
+  UseQuestionQueueOptions,
+  UseQuestionQueueResult,
+} from "./use-question-queue-types";
 
-export interface UseQuestionQueueOptions {
-  /** Fetches one batch. Injected so a test can stand in for the network. */
-  readonly fetchQuestions: FetchQuestions;
-
-  /** How many questions one fetch asks for. */
-  readonly batchSize?: number;
-
-  /** Refills once the queue behind `current` drops below this many. */
-  readonly refillBelow?: number;
-}
-
-/** Where the queue is in its lifecycle. */
-export type QuestionQueueStatus = "loading" | "ready" | "empty" | "error";
-
+export type {
+  FetchQuestions,
+  QuestionQueueStatus,
+  UseQuestionQueueOptions,
+  UseQuestionQueueResult,
+} from "./use-question-queue-types";
 /** The phases stored in state; `"empty"` is a derived fact about `"ready"`
  * (computed in this hook's return), not something to sync via an effect. */
 type InternalStatus = Exclude<QuestionQueueStatus, "empty">;
-
-export interface UseQuestionQueueResult {
-  /** The question a screen should show now, or `undefined` before the first
-   * batch has loaded, or once the queue has drained (`status: "empty"`). */
-  readonly current: WireQuestion | undefined;
-
-  /** Drops `current` and moves to the next queued question. */
-  readonly advance: () => void;
-
-  /** `"loading"` until the first batch resolves, then `"ready"`. `"empty"` is
-   * `"ready"`'s sibling for a drained queue, using the same `error`/`retry()`
-   * vocabulary, so a screen need not render blank. */
-  readonly status: QuestionQueueStatus;
-
-  /** The most recent fetch failure, or `undefined`; set on an initial-load
-   * failure (`status: "error"`) and on a refill failure (`status`/`current`
-   * untouched) alike. */
-  readonly error: unknown;
-
-  /** Retries the initial load if it failed, or a failed refill otherwise. */
-  readonly retry: () => void;
-}
 
 const DEFAULT_BATCH_SIZE = 5;
 const DEFAULT_REFILL_BELOW = 2;

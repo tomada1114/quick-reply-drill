@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 
-import { DrillDivider } from "@/components/drill/card";
 import type { DrillRecord } from "@/core/records";
 import { MAX_DASHBOARD_RECORDS } from "@/core/wire";
+import { DrillDivider } from "@/components/shared/card";
 
 import { buildDashboardView } from "./dashboard-view";
 import { RunsTable } from "./runs-table";
