@@ -170,3 +170,29 @@ export type ScoreRequest = z.infer<typeof scoreRequestSchema>;
 
 /** The answer body {@link scoreResponseSchema} describes. */
 export type ScoreResponse = z.infer<typeof scoreResponseSchema>;
+
+/**
+ * `POST /api/dashboard`'s wire contract.
+ *
+ * @remarks
+ * Declared in `src/core/wire-dashboard.ts`, a separate module, and re-exported
+ * here under this module's name: this endpoint's own per-field ceilings would
+ * have pushed this file over `eslint.config.mjs`'s 200-line `max-lines`
+ * budget, and `writing-typescript` calls a module that outgrows that budget
+ * "a module doing more than one thing" — split it rather than raise the
+ * number. A caller still writes `from "../../core/wire"` either way.
+ */
+export {
+  dashboardRequestSchema,
+  dashboardResponseSchema,
+  MAX_DASHBOARD_ANSWER_LENGTH,
+  MAX_DASHBOARD_COMMENT_LENGTH,
+  MAX_DASHBOARD_QUESTION_LENGTH,
+  MAX_DASHBOARD_RECORDED_AT_LENGTH,
+  MAX_DASHBOARD_RECORDS,
+  MAX_DASHBOARD_RUBRIC_VERSION_LENGTH,
+  MAX_DASHBOARD_SCENARIO_LINE_LENGTH,
+  type DashboardRecord,
+  type DashboardRequest,
+  type DashboardResponse,
+} from "./wire-dashboard";

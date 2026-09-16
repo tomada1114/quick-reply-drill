@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { CRITERIA, ITEM_IDS } from "../src/core/rubric";
+
 // The only suite that asks the application a question over HTTP. Every other
 // test here drives one layer through its own surface — a handler with
 // `new Request()`, a page under jsdom — so nothing else notices when the seams
@@ -61,6 +63,25 @@ const SCORE_REQUEST = {
   question: "Are you free for lunch tomorrow?",
   scenarioLine: "A coworker, in a direct message",
   answer: "Sure, tomorrow works. Where do you want to go?",
+};
+
+/** One schema-valid body for `POST /api/dashboard`, refused for the key, not the shape. */
+const DASHBOARD_REQUEST = {
+  records: [
+    {
+      recordedAt: "2026-09-01T00:00:00.000Z",
+      question: {
+        text: "Are you free for lunch tomorrow?",
+        scenarioLine: "A coworker, in a direct message",
+      },
+      answer: "Sure, tomorrow works. Where do you want to go?",
+      scores: Object.fromEntries(ITEM_IDS.map((id) => [id, 4])),
+      comments: Object.fromEntries(
+        CRITERIA.map((criterion) => [criterion.id, "Change this."]),
+      ),
+      rubricVersion: "2026-09.1",
+    },
+  ],
 };
 
 function delay(ms: number): Promise<void> {
@@ -524,6 +545,55 @@ describe("the built application, served by `next start`", () => {
         "sec-fetch-site": "same-origin",
       },
       body: JSON.stringify(SCORE_REQUEST),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_LLM_AUTH" },
+    });
+  });
+
+  it("refuses POST /api/dashboard without Sec-Fetch-Site", async () => {
+    const response = await fetch(`${baseUrl}/api/dashboard`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(DASHBOARD_REQUEST),
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_FORBIDDEN_ORIGIN" },
+    });
+  });
+
+  it("refuses POST /api/dashboard with a body the schema does not accept", async () => {
+    const response = await fetch(`${baseUrl}/api/dashboard`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "sec-fetch-site": "same-origin",
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_BAD_REQUEST" },
+    });
+  });
+
+  // The case that proves the endpoint is composed at all, and that the guards
+  // above it run in the stated order — for the price of nothing, because the
+  // key the server was spawned with is blank. A 200 here would mean this suite
+  // had just paid a provider to summarise a trend.
+  it("answers POST /api/dashboard with ERR_LLM_AUTH when no key is configured", async () => {
+    const response = await fetch(`${baseUrl}/api/dashboard`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "sec-fetch-site": "same-origin",
+      },
+      body: JSON.stringify(DASHBOARD_REQUEST),
     });
 
     expect(response.status).toBe(500);

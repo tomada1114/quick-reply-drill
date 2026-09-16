@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { CRITERIA, ITEM_IDS } from "../src/core/rubric";
 import {
+  dashboardRequestSchema,
+  dashboardResponseSchema,
+  MAX_DASHBOARD_RECORDS,
   MAX_QUESTIONS_PER_BATCH,
   questionsRequestSchema,
   questionsResponseSchema,
   scoreRequestSchema,
   scoreResponseSchema,
+  type DashboardRecord,
 } from "../src/core/wire";
 
 /**
@@ -19,6 +23,14 @@ import {
 const MAX_QUESTION_LENGTH = 300;
 const MAX_SCENARIO_LINE_LENGTH = 200;
 const MAX_ANSWER_LENGTH = 600;
+
+/** @see MAX_QUESTION_LENGTH, this time for the POST /api/dashboard cases below. */
+const MAX_DASHBOARD_RECORDED_AT_LENGTH = 40;
+const MAX_DASHBOARD_QUESTION_LENGTH = 300;
+const MAX_DASHBOARD_SCENARIO_LINE_LENGTH = 200;
+const MAX_DASHBOARD_ANSWER_LENGTH = 600;
+const MAX_DASHBOARD_COMMENT_LENGTH = 300;
+const MAX_DASHBOARD_RUBRIC_VERSION_LENGTH = 32;
 
 /** One answer body that must parse, for a case to vary a single field of. */
 function answerBody(): unknown {
@@ -205,5 +217,200 @@ describe("the POST /api/score answer body", () => {
     const body = scoreAnswerBody() as { items: Record<string, unknown> };
     body.items["grammar"] = { rationale: "Concrete reason.", score: 6 };
     expect(scoreResponseSchema.safeParse(body).success).toBe(false);
+  });
+});
+
+/** One record, for a case to vary a single field of. */
+function dashboardRecord(overrides: Partial<DashboardRecord> = {}): DashboardRecord {
+  return {
+    recordedAt: "2026-09-01T00:00:00.000Z",
+    question: {
+      text: "Are you free for lunch tomorrow?",
+      scenarioLine: "A coworker, in a direct message",
+    },
+    answer: "Sure, tomorrow works. Where do you want to go?",
+    scores: Object.fromEntries(
+      ITEM_IDS.map((id) => [id, 4]),
+    ) as DashboardRecord["scores"],
+    comments: Object.fromEntries(
+      CRITERIA.map((criterion) => [criterion.id, "Change this."]),
+    ) as DashboardRecord["comments"],
+    rubricVersion: "2026-09.1",
+    ...overrides,
+  };
+}
+
+describe("the POST /api/dashboard request body", () => {
+  it("accepts a well-formed single record", () => {
+    expect(
+      dashboardRequestSchema.safeParse({ records: [dashboardRecord()] }).success,
+    ).toBe(true);
+  });
+
+  it("accepts exactly the record ceiling", () => {
+    const records = Array.from({ length: MAX_DASHBOARD_RECORDS }, () =>
+      dashboardRecord(),
+    );
+    expect(dashboardRequestSchema.safeParse({ records }).success).toBe(true);
+  });
+
+  it("rejects an empty records array", () => {
+    expect(dashboardRequestSchema.safeParse({ records: [] }).success).toBe(false);
+  });
+
+  it("rejects one record over the ceiling", () => {
+    const records = Array.from({ length: MAX_DASHBOARD_RECORDS + 1 }, () =>
+      dashboardRecord(),
+    );
+    expect(dashboardRequestSchema.safeParse({ records }).success).toBe(false);
+  });
+
+  // The client is expected to filter to one rubric version before sending; a
+  // mix reaching this schema is refused rather than silently compared.
+  it("rejects records that mix rubricVersion", () => {
+    const records = [
+      dashboardRecord({ rubricVersion: "2026-09.1" }),
+      dashboardRecord({ rubricVersion: "2026-08.1" }),
+    ];
+    expect(dashboardRequestSchema.safeParse({ records }).success).toBe(false);
+  });
+
+  it("accepts several records sharing one rubricVersion", () => {
+    const records = [
+      dashboardRecord(),
+      dashboardRecord({ answer: "A different reply." }),
+    ];
+    expect(dashboardRequestSchema.safeParse({ records }).success).toBe(true);
+  });
+
+  // Every field below is caller-controlled once this endpoint exists, so each
+  // needs the same kind of ceiling `scoreRequestSchema` already holds
+  // `question`, `scenarioLine` and `answer` to — see the score request cases
+  // above for the same shape of table.
+  it.each([
+    [
+      "a recordedAt with millisecond precision",
+      { recordedAt: "2026-09-01T00:00:00.000Z" },
+    ],
+    ["a recordedAt with no fractional seconds", { recordedAt: "2026-09-01T00:00:00Z" }],
+    [
+      "a recordedAt exactly at its length ceiling",
+      {
+        recordedAt: `2026-09-01T00:00:00.${"9".repeat(
+          MAX_DASHBOARD_RECORDED_AT_LENGTH - "2026-09-01T00:00:00.Z".length,
+        )}Z`,
+      },
+    ],
+    [
+      "a question.text at its ceiling",
+      {
+        question: {
+          text: "a".repeat(MAX_DASHBOARD_QUESTION_LENGTH),
+          scenarioLine: "x",
+        },
+      },
+    ],
+    [
+      "a question.scenarioLine at its ceiling",
+      {
+        question: {
+          text: "x",
+          scenarioLine: "a".repeat(MAX_DASHBOARD_SCENARIO_LINE_LENGTH),
+        },
+      },
+    ],
+    ["an answer at its ceiling", { answer: "a".repeat(MAX_DASHBOARD_ANSWER_LENGTH) }],
+    [
+      "a comment at its ceiling",
+      {
+        comments: {
+          clarity: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH),
+          accuracy: "x",
+          vocabulary: "x",
+          appropriateness: "x",
+        },
+      },
+    ],
+    [
+      "a rubricVersion at its ceiling",
+      { rubricVersion: "a".repeat(MAX_DASHBOARD_RUBRIC_VERSION_LENGTH) },
+    ],
+  ])("accepts a record with %s", (_case, overrides) => {
+    expect(
+      dashboardRequestSchema.safeParse({ records: [dashboardRecord(overrides)] })
+        .success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ["a recordedAt with no timezone at all", { recordedAt: "2026-09-01T00:00:00" }],
+    [
+      "a recordedAt carrying a UTC offset instead of Z",
+      { recordedAt: "2026-09-01T10:00:00+09:00" },
+    ],
+    ["an empty recordedAt", { recordedAt: "" }],
+    ["a recordedAt that is just a date, no time", { recordedAt: "2026-09-01" }],
+    [
+      "a recordedAt over its length ceiling",
+      {
+        recordedAt: `2026-09-01T00:00:00.${"9".repeat(
+          MAX_DASHBOARD_RECORDED_AT_LENGTH - "2026-09-01T00:00:00.Z".length + 1,
+        )}Z`,
+      },
+    ],
+    [
+      "a question.text over its ceiling",
+      {
+        question: {
+          text: "a".repeat(MAX_DASHBOARD_QUESTION_LENGTH + 1),
+          scenarioLine: "x",
+        },
+      },
+    ],
+    [
+      "a question.scenarioLine over its ceiling",
+      {
+        question: {
+          text: "x",
+          scenarioLine: "a".repeat(MAX_DASHBOARD_SCENARIO_LINE_LENGTH + 1),
+        },
+      },
+    ],
+    [
+      "an answer over its ceiling",
+      { answer: "a".repeat(MAX_DASHBOARD_ANSWER_LENGTH + 1) },
+    ],
+    [
+      "a comment over its ceiling",
+      {
+        comments: {
+          clarity: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH + 1),
+          accuracy: "x",
+          vocabulary: "x",
+          appropriateness: "x",
+        },
+      },
+    ],
+    [
+      "a rubricVersion over its ceiling",
+      { rubricVersion: "a".repeat(MAX_DASHBOARD_RUBRIC_VERSION_LENGTH + 1) },
+    ],
+  ])("rejects a record with %s", (_case, overrides) => {
+    expect(
+      dashboardRequestSchema.safeParse({ records: [dashboardRecord(overrides)] })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("the POST /api/dashboard answer body", () => {
+  it("accepts a summary", () => {
+    expect(
+      dashboardResponseSchema.safeParse({ summary: "A steady paragraph." }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a body missing a summary", () => {
+    expect(dashboardResponseSchema.safeParse({}).success).toBe(false);
   });
 });

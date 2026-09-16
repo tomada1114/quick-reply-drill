@@ -2,6 +2,7 @@ import "server-only";
 
 import { createOpenAiLlmPort, type LlmPort } from "../ai/index";
 import { readServerEnv } from "./env";
+import { createDashboardHandler } from "./handlers/dashboard";
 import { createQuestionsHandler } from "./handlers/questions";
 import { createScoreHandler } from "./handlers/score";
 import { LLM_PROFILES, type LlmUse } from "./llm-profiles";
@@ -62,3 +63,6 @@ export const scoreHandler = createScoreHandler({
   llm: ports.scoring,
   model: LLM_PROFILES.scoring,
 });
+
+/** The handler `src/app/api/dashboard/route.ts` publishes as its `POST` export. */
+export const dashboardHandler = createDashboardHandler({ llm: ports.dashboard });
