@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vitest/config";
 
@@ -73,7 +74,16 @@ const serverOnlyEmptyModule = path.join(
   "empty.js",
 );
 
+// `tsconfig.json` declares `paths: { "@/*": ["./src/*"] }`, and Vite reads
+// none of it — `paths` is a type-checker instruction, not a resolver one. A
+// test importing `@/components/ui/button` would fail to resolve without this,
+// so the mapping is restated here against this file's own directory rather
+// than against the process cwd, which `pnpm exec vitest` does not guarantee.
+// `extends: true` on every project below is what carries it into all four.
+const srcDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), "src");
+
 export default defineConfig({
+  resolve: { alias: { "@": srcDirectory } },
   test: {
     environment: "node",
     alias: { "server-only": serverOnlyEmptyModule },

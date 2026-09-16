@@ -73,12 +73,11 @@ const LLM_SDK = [
 ];
 
 /**
- * Each zone under `src/`, as every relative specifier that can reach into it.
+ * Each zone under `src/`, as every specifier that can reach into it.
  *
  * @remarks
- * This repository has no `@/*` path alias — `tsconfig.json` declares neither
- * `baseUrl` nor `paths` — so leaving your own zone always costs at least one
- * `../`, and the same module is `../ai/index` from one file and
+ * A zone is reachable two ways. Relatively, leaving your own zone costs at
+ * least one `../`, and the same module is `../ai/index` from one file and
  * `../../ai/index` from another. The globstar after the `../` absorbs the rest
  * whatever the importer's depth, so one pattern covers every caller; the bare
  * form is listed alongside the recursive one because a directory import
@@ -95,11 +94,42 @@ const LLM_SDK = [
  * neither the `../**\/ai/**` pattern nor the `!../**\/ai/index` exemption below
  * without its own `./../**` copy. A bare specifier still cannot start with
  * `./..`, so the twin is exactly as safe as the pattern it doubles.
+ *
+ * The other way is the `@/*` → `./src/*` alias `tsconfig.json` declares (issue
+ * #13 added it, because shadcn/ui writes `@/components/...` imports into every
+ * component it copies in). That spelling carries no `../` to anchor and needs
+ * none: it is already absolute from `src/`, so `@/ai/**` names the zone from
+ * any depth, and it is safe to match unanchored because no bare package name
+ * can start with `@/` — a scoped package is `@scope/name`, and `/` is not a
+ * legal scope. A zone left without its `@/` twin would be a boundary the alias
+ * walks straight through, which is why every entry here carries both.
  */
 const ZONE = {
-  app: ["../**/app", "../**/app/**", "./../**/app", "./../**/app/**"],
-  server: ["../**/server", "../**/server/**", "./../**/server", "./../**/server/**"],
-  ai: ["../**/ai", "../**/ai/**", "./../**/ai", "./../**/ai/**"],
+  app: [
+    "../**/app",
+    "../**/app/**",
+    "./../**/app",
+    "./../**/app/**",
+    "@/app",
+    "@/app/**",
+  ],
+  server: [
+    "../**/server",
+    "../**/server/**",
+    "./../**/server",
+    "./../**/server/**",
+    "@/server",
+    "@/server/**",
+  ],
+  ai: ["../**/ai", "../**/ai/**", "./../**/ai", "./../**/ai/**", "@/ai", "@/ai/**"],
+  components: [
+    "../**/components",
+    "../**/components/**",
+    "./../**/components",
+    "./../**/components/**",
+    "@/components",
+    "@/components/**",
+  ],
 };
 
 /**
@@ -112,13 +142,16 @@ const ZONE = {
  * because the last matching entry wins. The `./../**` twin exists for the
  * same reason as {@link ZONE}'s: `./../ai/errors` and `./../ai/index` are
  * invisible to the `../**` forms, so each needs its own pattern and its own
- * exemption.
+ * exemption. The `@/` form is the third spelling, added with the alias, and
+ * needs its own exemption for the same reason.
  */
 const AI_LAYER_PRIVATE = [
   "../**/ai/**",
   "./../**/ai/**",
+  "@/ai/**",
   "!../**/ai/index",
   "!./../**/ai/index",
+  "!@/ai/index",
 ];
 
 /** Why everything under `src/ai/` but its surface is off limits to a caller. */
@@ -127,7 +160,11 @@ const AI_LAYER_IS_PRIVATE =
 
 /** Why the AI layer names no zone above it, stated by two blocks. */
 const AI_LAYER_LOOKS_ONLY_DOWNWARD =
-  "src/ai/ sits below src/server/ and src/app/ in the import order. A request or handler concern reaching in here inverts that dependency — take it as an argument on the LlmPort call instead.";
+  "src/ai/ sits below src/server/, src/components/ and src/app/ in the import order. A request, handler or rendering concern reaching in here inverts that dependency — take it as an argument on the LlmPort call instead.";
+
+/** Why `src/components/` looks only at `src/core/` and at the framework. */
+const COMPONENTS_LOOK_ONLY_DOWNWARD =
+  "src/components/ is client UI: it renders what it is handed. The import order is app → components → core, so a component names no page, no handler, no composition root, and nothing in the AI layer. Take the value as a prop and let src/app/ do the fetching.";
 
 /** Why a language-model SDK stops at the adapter that wraps it. */
 const LLM_SDK_IS_AN_ADAPTERS_BUSINESS =
@@ -278,10 +315,11 @@ export default defineConfig([
   },
   // --- zone boundaries -------------------------------------------------------
   //
-  // AGENTS.md states one import order — `app` → `server` → `ai` → `core` — and
-  // the blocks below are that order, written per zone as the zones each
-  // one may not name. On top of the order, `src/app/` and `src/server/`
-  // reach the AI layer only through `src/ai/index.ts`.
+  // AGENTS.md states one import order — `app` → `server` → `ai` → `core`, with
+  // `app` → `components` → `core` beside it — and the blocks below are that
+  // order, written per zone as the zones each one may not name. On top of the
+  // order, `src/app/` and `src/server/` reach the AI layer only through
+  // `src/ai/index.ts`.
   // `tests/boundaries.test.ts` asserts the same shape from the module graph, so
   // deleting a block here still fails the suite.
   //
@@ -313,9 +351,9 @@ export default defineConfig([
                 "src/core/ holds the vocabulary the other zones are written in — a Result, a domain type, a pure function — and it stays free of the framework and of any language-model SDK so it survives a change of either. Put the framework-aware code in src/app/ or src/server/ and the provider-aware code behind src/ai/.",
             },
             {
-              group: [...ZONE.ai, ...ZONE.server, ...ZONE.app],
+              group: [...ZONE.ai, ...ZONE.server, ...ZONE.app, ...ZONE.components],
               message:
-                "src/core/ is the bottom of the import order app → server → ai → core, so it names no zone above it. A type only one zone needs belongs in that zone; one they share belongs here, with nothing imported to define it.",
+                "src/core/ is the bottom of the import order app → server → ai → core (and app → components → core), so it names no zone above it. A type only one zone needs belongs in that zone; one they share belongs here, with nothing imported to define it.",
             },
           ],
         },
@@ -335,7 +373,7 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: [...ZONE.app, ...ZONE.server],
+              group: [...ZONE.app, ...ZONE.server, ...ZONE.components],
               message: AI_LAYER_LOOKS_ONLY_DOWNWARD,
             },
             {
@@ -356,7 +394,7 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: [...ZONE.app, ...ZONE.server],
+              group: [...ZONE.app, ...ZONE.server, ...ZONE.components],
               message: AI_LAYER_LOOKS_ONLY_DOWNWARD,
             },
           ],
@@ -380,7 +418,7 @@ export default defineConfig([
                 "The port is the interface adapters implement, so it cannot depend on one. An import here inverts the dependency and makes the fake — or the next vendor — impossible to remove.",
             },
             {
-              group: [...ZONE.app, ...ZONE.server],
+              group: [...ZONE.app, ...ZONE.server, ...ZONE.components],
               message: AI_LAYER_LOOKS_ONLY_DOWNWARD,
             },
             {
@@ -430,9 +468,45 @@ export default defineConfig([
               message: LLM_SDK_IS_AN_ADAPTERS_BUSINESS,
             },
             {
-              group: [...ZONE.app],
+              group: [...ZONE.app, ...ZONE.components],
               message:
-                "src/server/ sits below src/app/ in the import order app → server → ai → core. A handler or the composition root naming a page, a layout or a route module inverts that: the App Router tree imports the server layer, never the other way round.",
+                "src/server/ sits below src/app/ in the import order app → server → ai → core. A handler or the composition root naming a page, a layout, a route module or a component inverts that: the App Router tree imports the server layer and renders the components, never the other way round.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The fifth zone, and the only one that is neither framework entry point
+    // nor server code: `src/components/` is the client UI shadcn/ui copies
+    // into this repository and the app's own components beside it. It sits
+    // between `src/app/` and `src/core/` — a component is handed its data and
+    // renders it — so it may name the framework, the UI libraries and
+    // `src/core/`, and nothing else under `src/`. `server-only` is banned
+    // outright rather than reached through a zone pattern: a component
+    // importing it is one that has decided it can never be a Client
+    // Component, which is the opposite of what this zone is for, and the
+    // marker's whole job is to fail the build far from the cause.
+    name: "boundaries/components-import-only-core",
+    files: ["src/components/**/*.ts", "src/components/**/*.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [...ZONE.app, ...ZONE.server, ...ZONE.ai],
+              message: COMPONENTS_LOOK_ONLY_DOWNWARD,
+            },
+            {
+              group: LLM_SDK,
+              message: LLM_SDK_IS_AN_ADAPTERS_BUSINESS,
+            },
+            {
+              group: ["server-only"],
+              message:
+                "server-only pins a module to the server graph, and a component under src/components/ has to stay renderable from either graph. Put the server-side work in src/server/ and hand the component its result.",
             },
           ],
         },

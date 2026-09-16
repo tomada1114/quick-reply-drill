@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   color-scheme: light dark;
 }
@@ -8,7 +10,6 @@
 
 body {
   margin: 0;
-  padding: 2rem;
   font-family:
     system-ui,
     -apple-system,
