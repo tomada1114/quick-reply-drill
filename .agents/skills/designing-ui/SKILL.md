@@ -94,7 +94,13 @@ stylesheet and consumed as utilities; a component never carries a raw hex, a one
 - Every token value, the `@theme` block, and the component recipes are in
   [references/tokens.md](references/tokens.md). Read that file before writing CSS.
 
-## The three screens
+## The four screens
+
+**Idle.** The same centered column and card, reduced to one clear entry point. A
+one-line Rubik explanation (`One question, a timed reply, then feedback.`) sits above a
+large centered charcoal `Start` action. During question loading, keep that action
+disabled and place the shared slate status beside it; on failure, keep `Retry` and the
+inline error text. No secondary action belongs inside the card.
 
 **Drill.** One centered column, max width 720px, vertically centered on the viewport. A
 single card with three zones separated by hairline rules: a header row with the
