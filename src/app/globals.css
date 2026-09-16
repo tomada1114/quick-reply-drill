@@ -1,19 +1,123 @@
 @import "tailwindcss";
 
-:root {
-  color-scheme: light dark;
+/*
+ * The "Blueprint on Paper" lock's tokens, verbatim from
+ * `.agents/skills/designing-ui/references/tokens.md` — colors, the two font
+ * families (`--font-rubik`/`--font-plex-mono` are set on `<html>` by
+ * `src/app/layout.tsx`), radii, the one shadow, and the type scale. There is
+ * no `.dark` block: the lock rejects a dark theme outright.
+ *
+ * `static` (rather than Tailwind's default, usage-tracked `@theme`) is what
+ * makes tokens.md's own claim true — "the values reach both Tailwind
+ * utilities and any raw CSS" — for every token, not only the ones a utility
+ * class already happens to reference today: without it, an unreferenced pair
+ * like `--text-caption--line-height` is compiled away, and `var()` against it
+ * from hand-written CSS silently resolves to nothing.
+ */
+@theme static {
+  --color-paper: #ffffff;
+  --color-inset: #f5f5f5;
+  --color-rule: #e8e8f2;
+  --color-ink: #111111;
+  --color-body: #403f53;
+  --color-slate: #767682;
+  --color-fog: #a8a8b0;
+  --color-action: #1c2024;
+  --color-status: #9a5421;
+  --color-link: #303055;
+
+  --font-sans: var(--font-rubik), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-control: 4px;
+  --radius-card: 8px;
+
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.06);
+
+  --text-micro: 11px;
+  --text-micro--line-height: 1;
+  --text-micro--letter-spacing: 0.08em;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 1.78;
+  --text-caption--letter-spacing: 0.016em;
+
+  --text-body: 14px;
+  --text-body--line-height: 1.5;
+  --text-body--letter-spacing: 0.056em;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 1.5;
+
+  --text-question: 28px;
+  --text-question--line-height: 1.25;
+  --text-question--letter-spacing: -0.021em;
+
+  --text-figure: 48px;
+  --text-figure--line-height: 1;
+  --text-figure--letter-spacing: -0.021em;
 }
 
-* {
-  box-sizing: border-box;
+/*
+ * Preflight resets margin to 0 and heading/link styling to `inherit`, so a
+ * bare `<h1>`, `<p>` or `<a>` renders as undifferentiated body text unless
+ * something restores it — this is that something, kept in `@layer base` so a
+ * screen's own utility classes still win over it.
+ */
+@layer base {
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-body);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    margin-block-end: 16px;
+  }
+
+  h1 {
+    font-size: var(--text-question);
+    line-height: var(--text-question--line-height);
+    letter-spacing: var(--text-question--letter-spacing);
+  }
+
+  p {
+    margin-block-end: 16px;
+    font-size: var(--text-body-lg);
+    line-height: var(--text-body-lg--line-height);
+  }
+
+  a {
+    color: var(--color-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Mono numerals never jitter: the countdown, the score column, and every
+   * other monospace figure use tabular numerals everywhere they appear. */
+  code,
+  kbd,
+  samp,
+  pre,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
-body {
-  margin: 0;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
-  line-height: 1.5;
+/* This design spends no meaning on motion, so honoring the preference costs
+ * nothing: every transition and animation collapses to effectively instant. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
