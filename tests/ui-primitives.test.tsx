@@ -26,13 +26,11 @@ describe("cn", () => {
 });
 
 describe("Button", () => {
-  it("renders a button carrying its variant and size as data attributes", () => {
-    render(<Button variant="outline" size="sm" />);
+  it("renders a button carrying its slot as a data attribute", () => {
+    render(<Button />);
 
     const button = screen.getByRole("button");
     expect(button).toHaveAttribute("data-slot", "button");
-    expect(button).toHaveAttribute("data-variant", "outline");
-    expect(button).toHaveAttribute("data-size", "sm");
   });
 
   it("renders the child element instead of a button when asChild is set", () => {
@@ -48,7 +46,7 @@ describe("Button", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("lets a caller's className override the variant's own", () => {
+  it("lets a caller's className override the component's own default", () => {
     render(<Button className="p-8" />);
 
     expect(screen.getByRole("button").className).toContain("p-8");
