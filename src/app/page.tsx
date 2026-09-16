@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { Drill } from "@/components/drill/drill";
 
 /**
- * The one page this application ships: the drill loop `<Drill />` renders,
+ * The drill page: the loop `<Drill />` renders,
  * `idle → answering → scoring → feedback`.
  *
  * @remarks
