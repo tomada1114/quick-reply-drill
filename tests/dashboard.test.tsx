@@ -132,6 +132,17 @@ describe("Dashboard", () => {
     expect(rows[2]).toHaveTextContent("2026-09-10");
   });
 
+  it("uses CON for the conversation criterion column", async () => {
+    const storage = new MapStorage();
+    seed(storage, [makeRecord()]);
+
+    render(<Dashboard storage={storage} />);
+    await screen.findAllByRole("row");
+
+    expect(screen.getByRole("columnheader", { name: "CON" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "CLA" })).not.toBeInTheDocument();
+  });
+
   it("hides the sparkline with a single record", async () => {
     const oneRecord = new MapStorage();
     seed(oneRecord, [makeRecord({ id: "a" })]);

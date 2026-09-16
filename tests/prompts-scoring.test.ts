@@ -207,9 +207,14 @@ describe("buildScoringRequest", () => {
     expect(request.instructions).toContain("one or two sentences at the same register");
     expect(request.instructions).toContain("Mandatory cap");
     expect(request.instructions).toContain("Yes, I can.");
-    expect(request.instructions).toContain("cap each of those scores at 3");
+    expect(request.instructions).toContain(
+      "cap each of grammar, spellingPunctuation, wordChoice, and collocation at 3",
+    );
     expect(request.instructions).toContain("do not award 4 or 5");
     expect(request.instructions).toContain("extends it only as far as needed");
+    expect(request.instructions).toContain(
+      "must add one brief, natural follow-on sentence",
+    );
     expect(request.instructions).toContain("never a new answer");
     expect(request.instructions).toContain("Judge only this reply");
   });
