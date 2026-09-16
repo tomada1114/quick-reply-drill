@@ -73,12 +73,12 @@ pnpm exec vitest run tests/<module>.test.ts
 
 A `zod` bump surfaces first in whichever contract suite parses with it; a `react` bump
 in the component tests. No suite reaches a live service either way:
-`tests/ai-port.test.ts`'s contract suite runs `describeLlmPortContract` against the fake
-adapter, exercising the port's own schema handling — a `zod` bump that changes what
-`safeParseAsync` accepts or reports shows up there first, entirely offline. The only
-adapter this repository ships today is the fake one, so there is no vendor SDK a `zod`
-bump has to be verified against separately; `integrating-llm` owns what changes the day
-a provider adapter joins it.
+`tests/ai-port.test.ts`'s contract suite runs `describeLlmPortContract` against both
+adapters, exercising the port's own schema handling — a `zod` bump that changes what
+`safeParseAsync` accepts or reports shows up there first, entirely offline. `zod` is
+also a peer of `ai` and `@ai-sdk/openai`, so a major bump of it is checked against
+`tests/ai-openai.test.ts` too, which drives the real SDK over a substituted `fetch` and
+still reaches no service; `integrating-llm` owns that seam.
 
 Two checks run only on the PR. The `Dependency review` workflow fails on a new advisory
 or a denied license, and the weekly production audit above is now a gate that can

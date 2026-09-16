@@ -13,8 +13,9 @@ readServerEnv();
  *
  * @remarks
  * The fake adapter is what makes `pnpm dev` and `POST /api/ask` work with
- * nothing configured, and it is the only adapter this repository currently
- * ships — the vendor one was removed with `@anthropic-ai/sdk`. A provider
+ * nothing configured, and it is what this file still wires. `createOpenAiLlmPort`
+ * is shipped alongside it and deliberately not wired yet — choosing the model
+ * and the reasoning effort per call site is its own change. A provider
  * adapter is swapped in here and nowhere else — no environment variable
  * selects between them at runtime, because that would move the choice out of
  * the file whose whole job is to hold it. Wiring one built over
