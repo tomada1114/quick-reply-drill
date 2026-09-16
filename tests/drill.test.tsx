@@ -175,6 +175,18 @@ describe("Drill", () => {
     expect(screen.getByText("Question number 1?")).toBeInTheDocument();
   });
 
+  it("shows a pointer cursor on an enabled Send control", async () => {
+    stubFetch();
+    await renderDrill(new MapStorage());
+
+    clickStart();
+    typeReply("Sure, I'm free then.");
+
+    const sendButton = screen.getByRole("button", { name: "Send" });
+    expect(sendButton).toBeEnabled();
+    expect(sendButton).toHaveClass("cursor-pointer");
+  });
+
   it("keeps Start disabled while questions load and enables it when ready", async () => {
     let resolveQuestions: ((response: Response) => void) | undefined;
     vi.stubGlobal(

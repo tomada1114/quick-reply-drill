@@ -19,7 +19,7 @@ import { cn } from "@/components/lib/utils";
 // Tailwind resolves a bare `text-{name}` as that color whenever one exists
 // with the same name, before it ever considers `--text-{name}` a font size.
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-control bg-action px-6 py-2.5 font-sans text-[length:var(--text-body)] leading-[var(--text-body--line-height)] tracking-[var(--text-body--letter-spacing)] font-medium text-paper outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-inset disabled:text-fog [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-control bg-action px-6 py-2.5 font-sans text-[length:var(--text-body)] leading-[var(--text-body--line-height)] tracking-[var(--text-body--letter-spacing)] font-medium text-paper outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-inset disabled:text-fog [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 );
 
 interface ButtonProps extends ComponentProps<"button"> {

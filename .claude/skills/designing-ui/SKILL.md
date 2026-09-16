@@ -142,6 +142,9 @@ a measure of 65-75 characters, with the button that requests it directly above.
 - Focus is visible on every control: a 2px charcoal ring offset 2px, never removed to
   tidy the textarea. The textarea is the first focused element when a rep starts, with
   no click required.
+- Enabled buttons use a pointer cursor to expose their click affordance; disabled
+  buttons use the not-allowed cursor and the fog treatment already defined by the
+  primary-action recipe.
 - Contrast: slate `#767682` is the floor for text that must be read; fog `#a8a8b0` is
   placeholder and disabled state only, never a label or a score. Measure a new pairing
   rather than estimating it.
