@@ -1,8 +1,9 @@
-# my-package
+# quick-reply-drill
 
-[![CI](https://github.com/tomada1114/nextjs-app-template/actions/workflows/ci.yml/badge.svg)](https://github.com/tomada1114/nextjs-app-template/actions/workflows/ci.yml)
+[![CI](https://github.com/tomada1114/quick-reply-drill/actions/workflows/ci.yml/badge.svg)](https://github.com/tomada1114/quick-reply-drill/actions/workflows/ci.yml)
 
-A short description.
+Answer a one-line English question in thirty seconds, and get it scored the same way
+every time.
 
 ## What this is
 
@@ -49,18 +50,6 @@ is being read — before the model is asked, on either path. Both ceilings are c
 `MAX_PROMPT_LENGTH` in `src/server/handlers/ask.ts` and `MAX_REQUEST_BODY_BYTES` in
 `src/server/http.ts`.
 
-## Starting a new app from this template
-
-Copy the tree, then work through
-[`starting-an-app`](.agents/skills/starting-an-app/SKILL.md), which owns the procedure
-and the order it runs in: rename first, then adapt the language-model seam, then decide
-the locales, then run `pnpm check:source` once.
-
-The rename is what the title, the description and the author above are waiting for —
-they are this template's own identity strings, deliberately left as placeholders.
-`tests/placeholders.test.ts` holds the complete list of where one still stands, and a
-new app is finished renaming when that list is empty and the test is green.
-
 ## Development
 
 This package is private: nothing here is packed, published, or consumed as a tarball.
@@ -82,4 +71,4 @@ change is held to.
 
 ## License
 
-[MIT](LICENSE) © Your Name
+[MIT](LICENSE) © tomada
