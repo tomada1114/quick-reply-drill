@@ -1,7 +1,7 @@
 {
-  "name": "my-package",
+  "name": "quick-reply-drill",
   "version": "0.1.1",
-  "description": "A short description.",
+  "description": "Answer a one-line English question in thirty seconds, and get it scored the same way every time.",
   "private": true,
   "license": "MIT",
   "type": "module",

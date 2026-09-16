@@ -18,8 +18,7 @@ import { readText, repoRoot, walk } from "./repo-tree";
 // works through. A new app replaces each site the inventory names below and
 // deletes that row from EXPECTED_INVENTORY; it is finished when the list is
 // empty and this suite is green — an empty list then means no identity string
-// of this template survived. `starting-an-app` owns the order and the values
-// to write in; this file owns the list.
+// of this template survived. This file owns the list.
 
 /**
  * Every string that names *this template* rather than a project built from it.
@@ -71,16 +70,7 @@ const PLACEHOLDERS = [
  * security-advisory link have to resolve *while this repository is the
  * template*, and a fork replaces them like any other row.
  */
-const EXPECTED_INVENTORY = [
-  ".github/ISSUE_TEMPLATE/config.yml: tomada1114/nextjs-app-template",
-  "LICENSE: Your Name",
-  "README.md: A short description.",
-  "README.md: Your Name",
-  "README.md: my-package",
-  "README.md: tomada1114/nextjs-app-template",
-  "package.json: A short description.",
-  "package.json: my-package",
-];
+const EXPECTED_INVENTORY: readonly string[] = [];
 
 /**
  * This file, which necessarily spells out every placeholder it looks for.
@@ -137,9 +127,9 @@ describe("the badge and advisory URLs", () => {
   // it would pass on a badge URL missing its workflow filename. This pins both
   // URLs by their shape instead — path segments and filename — with owner and
   // repository left open on purpose: a renamed project writes its own slug in,
-  // and pinning this template's would make the rename `starting-an-app`
-  // documents impossible to finish with a green suite. The slug itself is the
-  // inventory's job, one row per file.
+  // and pinning this template's would make that rename impossible to finish
+  // with a green suite. The slug itself is the inventory's job, one row per
+  // file.
   it.each([
     [
       "README.md",
