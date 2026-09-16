@@ -186,6 +186,17 @@ describe("the import scanner the zone assertions run on", () => {
     ],
     ["src/app/api/score/route.ts", ["../../../server/composition"]],
     ["src/app/api/questions/route.ts", ["../../../server/composition"]],
+    ["src/app/api/dashboard/route.ts", ["../../../server/composition"]],
+    [
+      "src/server/handlers/dashboard.ts",
+      [
+        "../../ai/index",
+        "../../core/wire",
+        "../http",
+        "../prompts/dashboard",
+        "../request-body",
+      ],
+    ],
   ])("reads %s as %p", (file, expected) => {
     const module = sourceModules.find((candidate) => candidate.file === file);
     expect(module?.specifiers).toStrictEqual(expected);

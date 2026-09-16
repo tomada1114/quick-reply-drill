@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { CRITERIA, ITEM_IDS } from "../src/core/rubric";
 import {
+  dashboardRequestSchema,
+  dashboardResponseSchema,
+  MAX_DASHBOARD_RECORDS,
   MAX_QUESTIONS_PER_BATCH,
   questionsRequestSchema,
   questionsResponseSchema,
   scoreRequestSchema,
   scoreResponseSchema,
+  type DashboardRecord,
 } from "../src/core/wire";
 
 /**
@@ -205,5 +209,81 @@ describe("the POST /api/score answer body", () => {
     const body = scoreAnswerBody() as { items: Record<string, unknown> };
     body.items["grammar"] = { rationale: "Concrete reason.", score: 6 };
     expect(scoreResponseSchema.safeParse(body).success).toBe(false);
+  });
+});
+
+/** One record, for a case to vary a single field of. */
+function dashboardRecord(overrides: Partial<DashboardRecord> = {}): DashboardRecord {
+  return {
+    recordedAt: "2026-09-01T00:00:00.000Z",
+    question: {
+      text: "Are you free for lunch tomorrow?",
+      scenarioLine: "A coworker, in a direct message",
+    },
+    answer: "Sure, tomorrow works. Where do you want to go?",
+    scores: Object.fromEntries(
+      ITEM_IDS.map((id) => [id, 4]),
+    ) as DashboardRecord["scores"],
+    comments: Object.fromEntries(
+      CRITERIA.map((criterion) => [criterion.id, "Change this."]),
+    ) as DashboardRecord["comments"],
+    rubricVersion: "2026-09.1",
+    ...overrides,
+  };
+}
+
+describe("the POST /api/dashboard request body", () => {
+  it("accepts a well-formed single record", () => {
+    expect(
+      dashboardRequestSchema.safeParse({ records: [dashboardRecord()] }).success,
+    ).toBe(true);
+  });
+
+  it("accepts exactly the record ceiling", () => {
+    const records = Array.from({ length: MAX_DASHBOARD_RECORDS }, () =>
+      dashboardRecord(),
+    );
+    expect(dashboardRequestSchema.safeParse({ records }).success).toBe(true);
+  });
+
+  it("rejects an empty records array", () => {
+    expect(dashboardRequestSchema.safeParse({ records: [] }).success).toBe(false);
+  });
+
+  it("rejects one record over the ceiling", () => {
+    const records = Array.from({ length: MAX_DASHBOARD_RECORDS + 1 }, () =>
+      dashboardRecord(),
+    );
+    expect(dashboardRequestSchema.safeParse({ records }).success).toBe(false);
+  });
+
+  // The client is expected to filter to one rubric version before sending; a
+  // mix reaching this schema is refused rather than silently compared.
+  it("rejects records that mix rubricVersion", () => {
+    const records = [
+      dashboardRecord({ rubricVersion: "2026-09.1" }),
+      dashboardRecord({ rubricVersion: "2026-08.1" }),
+    ];
+    expect(dashboardRequestSchema.safeParse({ records }).success).toBe(false);
+  });
+
+  it("accepts several records sharing one rubricVersion", () => {
+    const records = [
+      dashboardRecord(),
+      dashboardRecord({ answer: "A different reply." }),
+    ];
+    expect(dashboardRequestSchema.safeParse({ records }).success).toBe(true);
+  });
+});
+
+describe("the POST /api/dashboard answer body", () => {
+  it("accepts a summary", () => {
+    expect(
+      dashboardResponseSchema.safeParse({ summary: "A steady paragraph." }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a body missing a summary", () => {
+    expect(dashboardResponseSchema.safeParse({}).success).toBe(false);
   });
 });
