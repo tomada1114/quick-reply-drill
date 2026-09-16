@@ -35,13 +35,14 @@ answer is almost never a file under `src/app/`.
 
 ## The Server / Client boundary
 
-Every file under `src/app/` is a Server Component until one says `"use client"`. This
-template ships no such file today: nothing under `src/app/` owns state, an effect, or a
-browser API, so the boundary has not had to be drawn yet. Do not treat that as evidence
-the decision is easy when the first one lands — the directive is what makes a file a
-Client Component, not what the file happens to call. A function that only resolves on
-the server, such as reading `cookies()` or `headers()` from `next/headers`, still runs
-there without `"use client"`; the directive is the only thing that flips the boundary.
+Every file under `src/app/` is a Server Component until one says `"use client"`. None
+does: `src/app/page.tsx` and `src/app/dashboard/page.tsx` stay Server Components and
+render `Drill` and `Dashboard`, whose own files under `src/components/` carry the
+directive because they own the state, effects and `localStorage` access. That is the
+precedent to follow — the directive is what makes a file a Client Component, not what
+the file happens to call. A function that only resolves on the server, such as reading
+`cookies()` or `headers()` from `next/headers`, still runs there without `"use client"`;
+the directive is the only thing that flips the boundary.
 
 - Add `"use client"` to the smallest file that actually needs the client: the one owning
   state, an effect, a browser API, or a DOM event handler. Pass it data as props from
