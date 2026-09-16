@@ -20,11 +20,13 @@ checked.
 
 ## Overview
 
-A Next.js application on the App Router, written in ESM-only TypeScript: a page tree,
-two JSON endpoints, and every language-model call behind a port that an adapter
-implements. A missing credential stops nothing from starting — `pnpm dev` runs and the
-pages render, and an endpoint that needs the model answers `ERR_LLM_AUTH` per request —
-and the AI layer keeps provider-specific code behind that port.
+A Next.js application on the App Router, written in ESM-only TypeScript: the drill — one
+question, a thirty-second reply, a rubric-graded feedback screen, then the next question
+— the dashboard that reads a learner's own stored history back, three JSON endpoints,
+and every language-model call behind a port that an adapter implements. A missing
+credential stops nothing from starting — `pnpm dev` runs and the pages render, and an
+endpoint that needs the model answers `ERR_LLM_AUTH` per request — and the AI layer
+keeps provider-specific code behind that port.
 
 It grew out of a template, and the template's locale-prefixed page tree, its `next-intl`
 message catalogs and its Anthropic adapter have been removed: this application ships one
@@ -128,14 +130,20 @@ three seams:
 
 - **The port.** `src/ai/port.ts` declares `LlmPort`, the vendor-neutral interface every
   model call goes through, and `src/ai/index.ts` is the AI layer's whole surface — the
-  port, its error vocabulary, and whichever adapter that file chooses to publish.
-  `src/ai/adapters/` is private to the layer, so swapping the fake for a provider is a
-  bounded edit and vendor-specific code does not leak into callers.
+  port, its error vocabulary, and whichever adapter that file chooses to publish. A
+  request carries an optional `instructions` block, the system-level brief a caller
+  writes once per use and reuses across every call, alongside the per-request `prompt`.
+  `src/ai/adapters/` is private to the layer, so swapping the vendor behind the port is
+  a bounded edit and vendor-specific code does not leak into callers;
+  `src/server/llm-profiles.ts` is the other file naming a model, one profile — a model
+  id and a reasoning effort — per use, so a call site never states either itself.
 - **The Web-standard handler.** `src/server/handlers/score.ts` exports
   `createScoreHandler(dependencies)`, which returns a plain
   `(request: Request) => Promise<Response>` and imports nothing from `next`. That is
   what lets a test drive it with `new Request(…)` and no framework, and what keeps
-  `src/app/api/score/route.ts` a one-line re-export with no logic of its own to test.
+  `src/app/api/score/route.ts` a one-line re-export with no logic of its own to test —
+  `createQuestionsHandler` and `createDashboardHandler` repeat the identical shape for
+  the other two endpoints.
 - **The environment.** `src/server/env.ts` is the only module under `src/` that reads
   `process.env`. It validates the whole environment against one schema and hands every
   other module what it needs as an argument, so "where does this secret enter the
@@ -163,10 +171,10 @@ wire schema declares, and rejects those before `llm.generate`.
 Nothing here is published, so the contract is not an export map. It is what a caller
 outside the process can observe, plus what each zone publishes to the zone above it:
 
-- **Contract.** The HTTP surface of `POST /api/questions` and `POST /api/score` — their
-  request bodies, their answers, and the `error.code` vocabulary a client branches on.
-  The `LlmPort` interface, `LlmError` and its `ERR_LLM_*` codes, and everything else
-  `src/ai/index.ts` names.
+- **Contract.** The HTTP surface of `POST /api/questions`, `POST /api/score` and
+  `POST /api/dashboard` — their request bodies, their answers, and the `error.code`
+  vocabulary a client branches on. The `LlmPort` interface, `LlmError` and its
+  `ERR_LLM_*` codes, and everything else `src/ai/index.ts` names.
 - **Private.** `src/ai/adapters/**`; the wiring inside `src/server/composition.ts`; and
   any module a zone's own surface does not re-export. A test reaches a private module
   through the surface that owns it, never around it.

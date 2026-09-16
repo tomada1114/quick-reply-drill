@@ -161,7 +161,7 @@ is back to zero after an abort.
 - Testing that a dependency works, rather than how this application uses it.
 - Mocking so much that the real code under test never runs.
 - Pinning, in a test of one seam, a value another seam owns — a test of the composed
-  route that asserted the fake adapter's wording would have to be edited to swap the
+  route that asserted the fake `LlmPort`'s wording would have to be edited to swap the
   adapter.
 
 ## Property-based testing

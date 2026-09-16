@@ -78,6 +78,12 @@ stylesheet and consumed as utilities; a component never carries a raw hex, a one
   holds why). `src/components/` may name `src/core/`, the framework and the UI
   libraries, and nothing else under `src/` — AGENTS.md's Architecture section owns that
   edge, and `eslint.config.mjs` plus `tests/boundaries.test.ts` enforce it.
+- `pnpm dlx shadcn@latest …` cannot run from this repository's root: the CLI's own
+  dependency graph reaches `semver@6`, which `pnpm-workspace.yaml`'s
+  `trustPolicy: no-downgrade` refuses. Run it from a scratch directory outside the
+  repository and point it back with `-c <path to this checkout>`, so the component still
+  lands in `src/components/` while nothing installed into the repository bypasses the
+  policy — then rewrite the `cn` and `Slot` imports as the bullet above describes.
 - shadcn/ui components are copied into this repository, so they are ordinary source
   files to edit, not a dependency to configure around. Restyle the copy to the tokens on
   the way in — an untouched default carries its own neutral palette and radius, which is

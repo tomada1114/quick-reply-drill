@@ -128,7 +128,7 @@ operator's alerting matches on.
 - Say so in the PR body, in one line naming the old code, the new one, and what a client
   has to change. A code that changes silently is one nobody downstream finds out about
   until an alert stops firing.
-- There is a compile-time backstop for one half of it: `STATUS_BY_LLM_CODE` in
+- There is a compile-time backstop for one half of it: `llmFailure`'s status table in
   `src/server/http.ts` is written `as const satisfies Record<LlmErrorCode, number>`, so
   a code added to or removed from the union fails the build until that table agrees. It
   cannot see a client, and it cannot see a `scripts/**` code at all.
