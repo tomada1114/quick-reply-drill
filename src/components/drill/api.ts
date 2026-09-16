@@ -1,10 +1,14 @@
 import * as z from "zod";
 
 import {
+  dashboardRequestSchema,
+  dashboardResponseSchema,
   questionsRequestSchema,
   questionsResponseSchema,
   scoreRequestSchema,
   scoreResponseSchema,
+  type DashboardRecord,
+  type DashboardResponse,
   type QuestionsResponse,
   type ScoreRequest,
   type ScoreResponse,
@@ -167,4 +171,25 @@ export async function submitForScoring(
 ): Promise<ScoreResponse> {
   const parsedBody = scoreRequestSchema.parse(body);
   return postJson("/api/score", parsedBody, scoreResponseSchema, signal);
+}
+
+/**
+ * Posts `records` to `POST /api/dashboard` and parses the trend paragraph
+ * back.
+ *
+ * @remarks
+ * `records` is validated against {@link dashboardRequestSchema} before
+ * anything is sent, the same way {@link submitForScoring} validates its own
+ * body: a caller that sent an empty array, more than the wire ceiling, or
+ * mixed `rubricVersion`s fails locally instead of spending a round trip on a
+ * request the server would refuse anyway. The dashboard screen is what
+ * filters to one rubric version and caps the count before ever building this
+ * array — this function only re-checks what it is handed.
+ */
+export async function fetchDashboardSummary(
+  records: DashboardRecord[],
+  signal?: AbortSignal,
+): Promise<DashboardResponse> {
+  const parsedBody = dashboardRequestSchema.parse({ records });
+  return postJson("/api/dashboard", parsedBody, dashboardResponseSchema, signal);
 }

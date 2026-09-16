@@ -2,13 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   ApiError,
+  fetchDashboardSummary,
   fetchQuestions,
   submitForScoring,
 } from "../src/components/drill/api";
 import { CRITERIA, ITEM_IDS } from "../src/core/rubric";
 import {
+  MAX_DASHBOARD_RECORDS,
   MAX_QUESTIONS_PER_BATCH,
   MAX_SCORE_ANSWER_LENGTH,
+  type DashboardRecord,
   type QuestionsResponse,
   type ScoreRequest,
   type ScoreResponse,
@@ -44,6 +47,28 @@ const SCORE_REQUEST: ScoreRequest = {
   scenarioLine: "A coworker, in a direct message",
   answer: "Sure, tomorrow works. Where do you want to go?",
 };
+
+/** One schema-valid dashboard record. */
+function makeDashboardRecord(
+  overrides: Partial<DashboardRecord> = {},
+): DashboardRecord {
+  return {
+    recordedAt: "2026-09-01T00:00:00.000Z",
+    question: {
+      text: "Are you free for lunch tomorrow?",
+      scenarioLine: "A coworker, in a direct message",
+    },
+    answer: "Sure, tomorrow works. Where do you want to go?",
+    scores: Object.fromEntries(
+      ITEM_IDS.map((id) => [id, 4]),
+    ) as DashboardRecord["scores"],
+    comments: Object.fromEntries(
+      CRITERIA.map((criterion) => [criterion.id, "Change this."]),
+    ) as DashboardRecord["comments"],
+    rubricVersion: "2026-09.2",
+    ...overrides,
+  };
+}
 
 /** A full, schema-valid score answer: eight items, four comments. */
 const VALID_SCORE: ScoreResponse = {
@@ -246,5 +271,104 @@ describe("submitForScoring", () => {
         body: JSON.stringify({ ...SCORE_REQUEST, answer: "padded reply" }),
       }),
     );
+  });
+});
+
+describe("fetchDashboardSummary", () => {
+  it("parses a valid response body", async () => {
+    const records = [makeDashboardRecord()];
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(200, { summary: "You're trending up." }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchDashboardSummary(records)).resolves.toStrictEqual({
+      summary: "You're trending up.",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/dashboard",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "same-origin",
+        body: JSON.stringify({ records }),
+      }),
+    );
+  });
+
+  it("forwards the given signal to fetch", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(200, { summary: "Steady." }));
+    vi.stubGlobal("fetch", fetchMock);
+    const controller = new AbortController();
+
+    await fetchDashboardSummary([makeDashboardRecord()], controller.signal);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/dashboard",
+      expect.objectContaining({ signal: controller.signal }),
+    );
+  });
+
+  it("rejects a response body that does not match dashboardResponseSchema", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse(200, { paragraph: "wrong key" })),
+    );
+
+    await expect(fetchDashboardSummary([makeDashboardRecord()])).rejects.toThrow();
+  });
+
+  it("rejects an empty records array before a request is sent", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchDashboardSummary([])).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects more than MAX_DASHBOARD_RECORDS records before a request is sent", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const tooMany = Array.from({ length: MAX_DASHBOARD_RECORDS + 1 }, () =>
+      makeDashboardRecord(),
+    );
+
+    await expect(fetchDashboardSummary(tooMany)).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects records that mix rubricVersion before a request is sent", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const mixed = [
+      makeDashboardRecord({ rubricVersion: "2026-09.2" }),
+      makeDashboardRecord({ rubricVersion: "2026-09.1" }),
+    ];
+
+    await expect(fetchDashboardSummary(mixed)).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("maps a 429 error envelope to an ApiError carrying its status and code", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse(429, {
+          error: {
+            code: "ERR_LLM_RATE_LIMIT",
+            message: "The language model could not answer this request.",
+          },
+        }),
+      ),
+    );
+
+    const error: unknown = await fetchDashboardSummary([makeDashboardRecord()]).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(429);
+    expect((error as ApiError).code).toBe("ERR_LLM_RATE_LIMIT");
   });
 });
