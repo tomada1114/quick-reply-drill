@@ -23,25 +23,26 @@ it joins (`placing-tests`).
 Model ids and pricing are deliberately not written down here — they go stale faster than
 a skill is reread.
 
-## The LlmPort seam and the offline fake
+## The LlmPort seam and its two adapters
 
-The Anthropic adapter this skill was written around has been removed, along with
-`@anthropic-ai/sdk` and its recorded fixtures. What remains under `src/ai/` is the
-vendor-neutral half — `port.ts`, `errors.ts`, `index.ts` — plus `adapters/fake/`, which
-is what `pnpm dev` and every test answer from today. The settled design keeps `LlmPort`
-as the vendor-neutral seam and puts the Vercel AI SDK behind it in an adapter.
+Under `src/ai/` sit the vendor-neutral half — `port.ts`, `errors.ts`, `index.ts` — and
+two implementations of it. `adapters/fake/` answers from a fixed configuration, and is
+what `pnpm dev` and the composition root use today. `adapters/openai/` reaches OpenAI's
+Responses API through the Vercel AI SDK, and is the worked example the sections below
+describe: five small modules, and the `LlmPort` it returns is the only thing a caller
+sees.
 
-So the sections below state the rules a first adapter has to meet, and no longer point
-at code that implements them. Two consequences worth naming before you start:
+Two properties of that pair are worth naming before you change either:
 
-- **The port is currently unevidenced.** A fake agrees with any interface, including one
-  no real provider could implement, so nothing today proves `LlmPort` is genuinely
-  vendor-neutral. The first provider adapter is what supplies that evidence, by running
-  `describeLlmPortContract` against a second implementation.
-- **How an adapter is tested offline is a separate adapter concern.** The removed one
-  substituted the SDK's `fetch` and replayed recorded exchanges. Whatever replaces it
-  must keep the same two properties: CI never reaches the network, and the adapter under
-  test is the real one rather than a mock of it.
+- **The port is evidenced by the second adapter, not by the fake.** A fake agrees with
+  any interface, including one no real provider could implement. What proves `LlmPort`
+  is genuinely vendor-neutral is `describeLlmPortContract` running the identical
+  assertions against both, at the bottom of `tests/ai-port.test.ts`.
+- **A provider adapter is tested through its transport.** `adapters/openai/` takes a
+  `fetch` override, and `tests/openai-stub.ts` substitutes one that answers hand-written
+  bodies from `tests/fixtures/openai/` and throws for any other URL. That keeps both
+  properties a replacement must also keep: CI never reaches the network, and the adapter
+  under test is the real one rather than a mock of it.
 
 ## Port or adapter
 

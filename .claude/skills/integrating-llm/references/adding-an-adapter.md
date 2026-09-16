@@ -1,11 +1,9 @@
 # Adding a provider adapter
 
-There is no provider adapter in the tree to read first — the Anthropic one was removed
-with its SDK, leaving `src/ai/adapters/fake/` as the only implementation. So this is the
-procedure for writing the _first_ one as much as a second, and the shape the removed one
-had is worth reproducing: five small modules — the client, the request builder, the
-error mapping, the deadline, and the `generate` that joins them — which is what keeps
-any one of them under the per-file budget `eslint.config.mjs` sets.
+Read `src/ai/adapters/openai/` first: it is the shape this procedure produces, and the
+one a second provider reproduces. Five small modules — the client, the request builder,
+the error mapping, the deadline, and the `generate` that joins them — which is what
+keeps any one of them under the per-file budget `eslint.config.mjs` sets.
 
 The design keeps `LlmPort` as the vendor-neutral seam. The Vercel AI SDK core and a
 provider SDK are implementation details of the adapter under `src/ai/adapters/`, so the
@@ -61,13 +59,13 @@ describeLlmPortContract("createMyAdapter", {
 });
 ```
 
-`replaying`, `portFor` and `neverAnswering` above are yours to write: the replay helpers
-the removed adapter used went with it, and how yours substitutes the transport is the
-open question `integrating-llm` names. The harness is the only thing that differs
-between adapters; the assertions do not, and that is the point — the same cases run
-against the fake and against yours. `failsWith` must be able to produce **every** member
-of `LlmErrorCode`; if one of them cannot be provoked from your vendor, that is a finding
-about the mapping, not a case to skip.
+`replaying`, `portFor` and `neverAnswering` above are yours to write, one set per
+vendor; `tests/openai-stub.ts` is the worked version, where `stubFetch` answers a
+fixture body at one URL and throws at every other. The harness is the only thing that
+differs between adapters; the assertions do not, and that is the point — the same cases
+run against the fake and against yours. `failsWith` must be able to produce **every**
+member of `LlmErrorCode`; if one of them cannot be provoked from your vendor, that is a
+finding about the mapping, not a case to skip.
 
 Adapter-specific behaviour — the status table, a vendor quirk, the request body it
 builds — goes in its own suite, `tests/ai-<vendor>.test.ts`, not into the shared

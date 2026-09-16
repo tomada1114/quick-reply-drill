@@ -112,9 +112,9 @@ function ask(
  * to.
  *
  * @remarks
- * Call it once per adapter. The fake is the only adapter this repository ships
- * today; a provider adapter adds its own `describeLlmPortContract(...)` call at
- * the bottom of this file, so the identical assertions run against both and the
+ * Call it once per adapter. Both of this repository's adapters — the fake and
+ * the OpenAI one — add their own `describeLlmPortContract(...)` call at the
+ * bottom of this file, so the identical assertions run against each and the
  * suite is still collected exactly once. It is exported for that reason, and
  * because a vendor adapter may well be measured from its own file.
  */
