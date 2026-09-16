@@ -34,7 +34,7 @@ repository stopped being one.
 answer it rather than deferring back:
 
 - `README.md` changes when the first ten minutes with a checkout change — the quick
-  start commands, what the one API route takes or answers, or where a new app begins.
+  start commands, what an API route takes or answers, or where a new page begins.
 - `CONTRIBUTING.md` changes when setup, the toolchain versions, the dependency cooldown,
   or the pull request process changes.
 - Neither changes for a refactor, a test, a gate or a rule that AGENTS.md owns, or an

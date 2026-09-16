@@ -23,7 +23,7 @@ the `.mjs` files under `scripts/` (`writing-repo-scripts`).
 
 - An error `code` string is not a naming decision made here — **REQUIRED:**
   `designing-errors` owns the `ERR_*` vocabulary for both `src/` and `scripts/`.
-- Keep a constant next to the code that reads it. `STATUS_BY_LLM_CODE` sits in
+- Keep a constant next to the code that reads it. `llmFailure`'s status table sits in
   `src/server/http.ts` and `PROMPT_OUTPUT_LANGUAGE` in `src/server/prompts/request.ts`,
   because those are the modules that read them. Do not create a shared `constants.ts`
   grab-bag that forces unrelated modules to import each other. A constant two zones both
@@ -40,8 +40,8 @@ the `.mjs` files under `scripts/` (`writing-repo-scripts`).
 - Prefer `satisfies` to `as` on a typed literal: `satisfies` keeps excess-property and
   missing-property checking, `as` silences both. `as const satisfies Record<K, V>` also
   keeps the literal keys, which is what makes a table exhaustive against a union —
-  `STATUS_BY_LLM_CODE` fails to compile when a code is added rather than falling through
-  to a default status.
+  `llmFailure`'s status table fails to compile when a code is added rather than falling
+  through to a default status.
 - A type assertion (`as T`) changes only the compile-time type — it provides zero
   runtime safety. Reach for a type guard (`value is T`) when narrowing on runtime shape,
   and keep any assertion that survives review local and non-exported.

@@ -26,11 +26,14 @@ a skill is reread.
 ## The LlmPort seam and its two adapters
 
 Under `src/ai/` sit the vendor-neutral half — `port.ts`, `errors.ts`, `index.ts` — and
-two implementations of it. `adapters/fake/` answers from a fixed configuration, and is
-what `pnpm dev` and the composition root use today. `adapters/openai/` reaches OpenAI's
-Responses API through the Vercel AI SDK, and is the worked example the sections below
-describe: five small modules, and the `LlmPort` it returns is the only thing a caller
-sees.
+two implementations of it. `adapters/openai/` reaches OpenAI's Responses API through the
+Vercel AI SDK, and is what `src/server/composition.ts` wires for every use — questions,
+scoring, and the dashboard summary — so `pnpm dev` runs it too, answering `ERR_LLM_AUTH`
+before a socket opens when the credential `src/server/env.ts` reads is absent. It is the
+worked example the sections below describe: five small modules, and the `LlmPort` it
+returns is the only thing a caller sees. `adapters/fake/` answers from a fixed
+configuration instead; a handler-level test builds one directly rather than reaching the
+composition root at all.
 
 Two properties of that pair are worth naming before you change either:
 
@@ -56,8 +59,8 @@ Everything a provider needs that the port does not name — a model id, a token 
 per-attempt timeout, a retry count, an HTTP client, a reasoning effort — is
 **construction-time configuration of one adapter**, not a request field. That is the
 test for where a new knob goes: on `LlmRequest` it would make the same request
-un-runnable against the fake, and the fake is what the contract suite and `pnpm dev` run
-on.
+un-runnable against the fake, which the contract suite and a handler-level test both
+build directly.
 
 A language-model SDK is importable **only** under `src/ai/adapters/`. Enforced by
 `eslint.config.mjs`'s `LLM_SDK` list inside its `boundaries/*` blocks, asserted again
@@ -163,15 +166,17 @@ restated here. What this skill owns is the mapping a new adapter must reproduce:
 
 Adding a member to the union changes what _every_ adapter promises, so it is declared in
 `src/ai/errors.ts` once and then implemented per adapter. Two compile-time backstops
-catch a half-done addition: `ALL_CODES` in `tests/ai-port.test.ts` and
-`STATUS_BY_LLM_CODE` in `src/server/http.ts`.
+catch a half-done addition: `ALL_CODES` in `tests/ai-port.test.ts` and `llmFailure`'s
+status table in `src/server/http.ts`.
 
 ## An adapter never reaches the network in a test
 
 CI must never pay for a test run or fail because a provider was slow, and a credential
-in `.env` is a real one — `pnpm test` and `pnpm test:smoke` both answer from the fake
-for that reason. Whatever seam a provider adapter is tested through, hold three
-properties:
+in `.env` is a real one. `pnpm test`'s handler-level suites answer from the fake
+`LlmPort` directly, and `pnpm test:smoke` spawns the built app with its credential
+blanked, so its own real adapter reports `ERR_LLM_AUTH` before a socket ever opens —
+neither path reaches a provider. Whatever seam a provider adapter is tested through,
+hold three properties:
 
 - **Substitute the transport, not the adapter.** Replacing the SDK's `fetch` keeps the
   adapter under test the one that talks to the provider — request built, signed and
@@ -211,7 +216,7 @@ manifests and gate configs — the dependency, the import restriction, the envir
 example, the automation-test list. A fifth module joining them is the moment the choice
 of vendor has escaped the composition root.
 
-Untouched: `src/ai/port.ts`, `src/ai/errors.ts` and the fake adapter — the whole
+Untouched: `src/ai/port.ts`, `src/ai/errors.ts` and the fake `LlmPort` — the whole
 vendor-neutral vocabulary, and the reason the edit is bounded at all — plus the handler,
 which only ever sees an `LlmPort`, and everything above it.
 
