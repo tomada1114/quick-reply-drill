@@ -65,12 +65,16 @@ not jitter and the score column stays a straight edge.
 ## The `@theme` block
 
 Declare all of the above once in the global stylesheet so the values reach both Tailwind
-utilities and any raw CSS:
+utilities and any raw CSS. That second half needs `@theme static`, not plain `@theme`:
+Tailwind's default `@theme` only emits the runtime CSS variable for a token some utility
+class already uses, so a token nothing has reached for yet —
+`--text-caption--line-height` before the drill screen exists to use it — compiles away,
+and hand-written CSS that references it with `var()` resolves to nothing.
 
 ```css
 @import "tailwindcss";
 
-@theme {
+@theme static {
   --color-paper: #ffffff;
   --color-inset: #f5f5f5;
   --color-rule: #e8e8f2;
@@ -95,6 +99,15 @@ utilities and any raw CSS:
 There is no dark theme. Adding one is a design decision, not a styling convenience: it
 would need its own reference research, because inverting these tokens produces the
 averaged dark UI the lock rejects.
+
+`body` names both a color and a text size, and Tailwind resolves a bare `text-body`
+class as the color every time — a size utility never wins that tie. Reach for the color
+through `text-(color:--color-body)` and for the size through
+`text-[length:var(--text-body)]` (pairing it with
+`leading-[var(--text-body--line-height)]` and
+`tracking-[var(--text-body--letter-spacing)]` for the line height and tracking a plain
+`text-{other-size}` utility would otherwise carry for you). No other token pair in this
+list collides.
 
 ## Component recipes
 
