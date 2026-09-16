@@ -78,16 +78,12 @@ stylesheet and consumed as utilities; a component never carries a raw hex, a one
   holds why). `src/components/` may name `src/core/`, the framework and the UI
   libraries, and nothing else under `src/` — AGENTS.md's Architecture section owns that
   edge, and `eslint.config.mjs` plus `tests/boundaries.test.ts` enforce it.
-- `pnpm dlx shadcn@latest add <name>` can fail before it writes anything when it is run
-  from this repository's own root: `pnpm dlx` still resolves the CLI's own dependency
-  tree under whatever `pnpm-workspace.yaml` governs the current directory, and this
-  repository's `trustPolicy: no-downgrade` (`managing-dependencies` holds what it
-  protects) refuses the install the moment one of the CLI's own transitive dependencies
-  carries weaker provenance than a version already trusted elsewhere in this workspace's
-  graph. Run the command from a directory outside this repository instead — anywhere
-  with no `pnpm-workspace.yaml` of its own — then copy the file it writes into
-  `src/components/` by hand, rewriting the `cn` and `Slot` imports as the bullet above
-  describes.
+- `pnpm dlx shadcn@latest …` cannot run from this repository's root: the CLI's own
+  dependency graph reaches `semver@6`, which `pnpm-workspace.yaml`'s
+  `trustPolicy: no-downgrade` refuses. Run it from a scratch directory outside the
+  repository and point it back with `-c <path to this checkout>`, so the component still
+  lands in `src/components/` while nothing installed into the repository bypasses the
+  policy — then rewrite the `cn` and `Slot` imports as the bullet above describes.
 - shadcn/ui components are copied into this repository, so they are ordinary source
   files to edit, not a dependency to configure around. Restyle the copy to the tokens on
   the way in — an untouched default carries its own neutral palette and radius, which is
