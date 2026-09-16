@@ -11,6 +11,7 @@ import {
   scoreRequestSchema,
   scoreResponseSchema,
   type DashboardRecord,
+  type ScoreResponse,
 } from "../src/core/wire";
 
 /**
@@ -217,6 +218,85 @@ describe("the POST /api/score answer body", () => {
     const body = scoreAnswerBody() as { items: Record<string, unknown> };
     body.items["grammar"] = { rationale: "Concrete reason.", score: 6 };
     expect(scoreResponseSchema.safeParse(body).success).toBe(false);
+  });
+
+  // The grader's own output, not caller input — but stored verbatim in a
+  // `DrillRecord`, so an over-long field is bound to the same ceiling
+  // `dashboardRecordSchema` holds a caller's comment to, and a shortfall here
+  // is what a real port maps to `ERR_LLM_INVALID_OUTPUT` rather than storing.
+  it("accepts a rationale and a comment exactly at MAX_DASHBOARD_COMMENT_LENGTH", () => {
+    const body = scoreAnswerBody() as {
+      items: Record<string, { rationale: string; score: number }>;
+      comments: Record<string, string>;
+    };
+    body.items["grammar"] = {
+      rationale: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH),
+      score: 4,
+    };
+    body.comments["clarity"] = "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH);
+    expect(scoreResponseSchema.safeParse(body).success).toBe(true);
+  });
+
+  it("rejects a rationale one character over MAX_DASHBOARD_COMMENT_LENGTH", () => {
+    const body = scoreAnswerBody() as {
+      items: Record<string, { rationale: string; score: number }>;
+    };
+    body.items["grammar"] = {
+      rationale: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH + 1),
+      score: 4,
+    };
+    expect(scoreResponseSchema.safeParse(body).success).toBe(false);
+  });
+
+  it("rejects a comment one character over MAX_DASHBOARD_COMMENT_LENGTH", () => {
+    const body = scoreAnswerBody() as { comments: Record<string, string> };
+    body.comments["clarity"] = "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH + 1);
+    expect(scoreResponseSchema.safeParse(body).success).toBe(false);
+  });
+});
+
+// The issue this closes: a stored `DrillRecord`'s comments come straight from
+// a `POST /api/score` answer, and `POST /api/dashboard` bounds what it accepts
+// back by length. If the two ceilings ever drifted apart, a record produced by
+// the first call could be refused by the second — this reuses the *same*
+// `comments` value across both schemas, rather than two independently built
+// values that happen to agree, to prove that cannot happen.
+describe("a POST /api/score answer is always a POST /api/dashboard will accept", () => {
+  it("accepts a score answer's own comments, unchanged, in a dashboard record", () => {
+    const scored: ScoreResponse = scoreResponseSchema.parse({
+      rubricVersion: "2026-09.1",
+      model: { alias: "a-model-alias", reasoningEffort: "high" },
+      items: Object.fromEntries(
+        ITEM_IDS.map((id) => [
+          id,
+          { rationale: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH), score: 4 },
+        ]),
+      ),
+      comments: Object.fromEntries(
+        CRITERIA.map((criterion) => [
+          criterion.id,
+          "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH),
+        ]),
+      ),
+      modelReply: "Sure, tomorrow works for me. Where would you like to go?",
+    });
+
+    const record: DashboardRecord = {
+      recordedAt: "2026-09-01T00:00:00.000Z",
+      question: {
+        text: SCORE_REQUEST.question,
+        scenarioLine: SCORE_REQUEST.scenarioLine,
+      },
+      answer: SCORE_REQUEST.answer,
+      scores: Object.fromEntries(
+        ITEM_IDS.map((id) => [id, scored.items[id].score]),
+      ) as DashboardRecord["scores"],
+      // The same value `scoreResponseSchema` just accepted, not a rebuilt one.
+      comments: scored.comments,
+      rubricVersion: scored.rubricVersion,
+    };
+
+    expect(dashboardRequestSchema.safeParse({ records: [record] }).success).toBe(true);
   });
 });
 
