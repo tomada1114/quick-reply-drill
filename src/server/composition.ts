@@ -4,11 +4,6 @@ import { createFakeLlmPort } from "../ai/index";
 import { readServerEnv } from "./env";
 import { createAskHandler } from "./handlers/ask";
 
-// The wired adapter is the fake, so the two mentions of the vendor's name
-// below live only in `@remarks` prose, never in code. That prose is
-// load-bearing: `tests/ai-vendor-swap.test.ts` asserts this file still names
-// the vendor somewhere, and a comment tidy that drops both mentions turns
-// that assertion, and the swap checklist it backs, red.
 /**
  * Whether the adapter this file wires bills a provider for every answer.
  *
@@ -16,7 +11,7 @@ import { createAskHandler } from "./handlers/ask";
  * This, and never what the environment happens to contain, is what closes
  * `POST /api/ask`: `readServerEnv` requires `API_ACCESS_KEY` while it is
  * `true`, so a deployment that pays for its answers cannot boot with the
- * endpoint open. A machine that exports `ANTHROPIC_API_KEY` for an unrelated
+ * endpoint open. A machine that exports `OPENAI_API_KEY` for an unrelated
  * reason still bills nothing while the fake adapter answers, which is why the
  * gate cannot be keyed off that variable's presence.
  *
@@ -39,11 +34,12 @@ const env = readServerEnv({ requiresAccessKey: ADAPTER_BILLS_A_PROVIDER });
  *
  * @remarks
  * The fake adapter is what makes `pnpm dev` and `POST /api/ask` work with
- * nothing configured. A provider adapter is swapped in here and nowhere else
- * — no environment variable selects between them at runtime, because that
- * would move the choice out of the file whose whole job is to hold it. Wiring
- * `createAnthropicAdapter({ apiKey: env.ANTHROPIC_API_KEY })` instead is the
- * same one-line edit in the other direction, with
+ * nothing configured, and it is the only adapter this repository currently
+ * ships — the vendor one was removed with `@anthropic-ai/sdk`. A provider
+ * adapter is swapped in here and nowhere else — no environment variable
+ * selects between them at runtime, because that would move the choice out of
+ * the file whose whole job is to hold it. Wiring one built over
+ * `env.OPENAI_API_KEY` is the same one-line edit in the other direction, with
  * {@link ADAPTER_BILLS_A_PROVIDER} set to `true` in the same commit.
  */
 const llm = createFakeLlmPort({

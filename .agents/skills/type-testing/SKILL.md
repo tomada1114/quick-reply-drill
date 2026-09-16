@@ -3,12 +3,11 @@ name: type-testing
 description: >
   Covers compile-time assertions with Vitest's expectTypeOf, written in the same suite
   as the runtime tests for the surface they check — the LlmPort request and response
-  types in src/ai/port.ts, and the derived MessageKey union in src/i18n/messages.ts
-  against the hand-written manifest in tests/messages.test.ts. Use when adding or
-  reviewing a @ts-expect-error assertion, a type test for a changed exported signature
-  or for a generic that must not widen, an `as const satisfies` list that has to stay in
-  step with a union, or when a type test passes even though the annotation it checks is
-  wrong.
+  types in src/ai/port.ts, and the closed LlmErrorCode union against the hand-written
+  manifest in tests/ai-port.test.ts. Use when adding or reviewing a @ts-expect-error
+  assertion, a type test for a changed exported signature or for a generic that must not
+  widen, an `as const satisfies` list that has to stay in step with a union, or when a
+  type test passes even though the annotation it checks is wrong.
 ---
 
 # Type Testing
@@ -54,13 +53,11 @@ Assert what inference is supposed to preserve, not what the annotation already s
   halves pull in opposite directions: `satisfies` rejects an entry that is not a member,
   and the `expectTypeOf` rejects a member the list forgot. Annotating the list
   `readonly LlmErrorCode[]` instead would lose the literal tuple type and let a new code
-  land with no case for it. `MESSAGE_KEYS` in `tests/messages.test.ts`, checked against
-  `MessageKey` (`DottedKeys<typeof en>` in `src/i18n/messages.ts`), is the same pattern
-  a second time: the manifest lives in the test rather than in source because nothing
-  under `src/` reads it — a compile-time assertion belongs wherever the two things it
-  holds together live, in source when one of them is a constant the application ships,
-  in a test when what is being pinned is an inference the source cannot state about
-  itself.
+  land with no case for it. The manifest lives in the test rather than in source because
+  nothing under `src/` reads it — a compile-time assertion belongs wherever the two
+  things it holds together live, in source when one of them is a constant the
+  application ships, in a test when what is being pinned is an inference the source
+  cannot state about itself.
 
 ## Trap 1: a `@ts-expect-error` inside `it()` still runs
 

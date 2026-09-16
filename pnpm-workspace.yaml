@@ -44,15 +44,19 @@ allowBuilds:
   # the whole point of depending on it for Git hooks.
   lefthook: true
   # `false` is a decision, not an omission: `strictDepBuilds` fails the install
-  # on a lifecycle script nobody has ruled on, and these two arrive as
-  # dependencies of `next-intl`, which reaches them only from its message
-  # extractor -- a feature this repository does not turn on. Neither script is
-  # needed for the prebuilt binary each package ships as an optional
-  # platform-specific dependency: `@swc/core`'s postinstall only probes that
+  # on a lifecycle script nobody has ruled on. Neither package is in the graph
+  # today -- both arrived under `next-intl`, which was removed with the i18n
+  # layer -- so these two entries currently rule on nothing. They are kept
+  # rather than deleted because the ruling is about the scripts themselves and
+  # would be reached again unchanged if either package returned under a
+  # different parent: the prebuilt binary each one ships as an optional
+  # platform-specific dependency is what this repository would use, and neither
+  # script is needed to get it. `@swc/core`'s postinstall only probes that
   # binary and installs `@swc/wasm` as a fallback when it cannot load, and
   # `@parcel/watcher`'s runs node-gyp only when no prebuild matched. Both would
-  # otherwise compile or fetch native code at install time for code this
-  # application never calls.
+  # otherwise compile or fetch native code at install time. Dropping an entry
+  # is safe too -- the install would fail closed and ask for a fresh ruling --
+  # so it is a `managing-dependencies` call, not a tidy-up.
   "@parcel/watcher": false
   "@swc/core": false
 

@@ -14,9 +14,9 @@ description: >
 
 **Owns:** the visual direction and its reference lock, the design tokens, the layout and
 component rules for every screen, and what a new surface must be researched against.
-**Does not own:** the text inside a component (`localizing-ui`); the TypeScript of a
-component (`writing-typescript`); which file a component may import from
-(`building-app-routes`).
+**Does not own:** the TypeScript of a component (`writing-typescript`); which file a
+component may import from (`building-app-routes`). No skill owns the text inside a
+component today — it is hard-coded English, written where it renders.
 
 Nothing here is enforced by a config or a test. A drifted screen passes every gate, so
 the reference lock below is the check, applied by reading it before styling and by

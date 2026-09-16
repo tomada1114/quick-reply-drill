@@ -362,8 +362,9 @@ describe("credentials: checkCredentials", () => {
       secretShaped('"password', '": ', '"Password"'),
     ],
     [
-      // Why the printable-ASCII condition exists: `messages/ja.json` is a
-      // Japanese catalog by definition, and its values sit under English keys.
+      // Why the printable-ASCII condition exists: a UI string can be written
+      // in any language while its key stays English, and none of that is a
+      // secret.
       "a Japanese UI message under a password key",
       secretShaped('"password', '": ', '"パスワードを入力してください"'),
     ],

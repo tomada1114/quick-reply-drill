@@ -149,33 +149,16 @@ describe("the ask handler", () => {
       llm: capturing(createFakeLlmPort({ response: ANSWER }), seen),
     });
 
-    await handler(
-      postRequest(JSON.stringify({ prompt: "  Which city? ", locale: "ja" })),
-    );
+    await handler(postRequest(JSON.stringify({ prompt: "  Which city? " })));
 
     expect(seen).toHaveLength(1);
     expect(seen[0]?.prompt).toBe("Which city?");
   });
 
-  // The mapping itself, not the port's field: the UI ships `en` and `ja`, and
-  // the model is asked in the BCP 47 tag each one names. A locale added to
-  // `src/i18n/locales.ts` without an entry in the handler's table fails to
-  // compile, so this only has to pin the values the table produces today.
-  it.each([
-    ["ja", "ja"],
-    ["en", "en"],
-  ])("asks the model to answer the %s locale in %s", async (locale, expected) => {
-    const seen: CapturedRequest[] = [];
-    const handler = createAskHandler({
-      llm: capturing(createFakeLlmPort({ response: ANSWER }), seen),
-    });
-
-    await handler(postRequest(JSON.stringify({ prompt: "Which city?", locale })));
-
-    expect(seen[0]?.outputLanguage).toBe(expected);
-  });
-
-  it("defaults the output language to English when the body omits the locale", async () => {
+  // The endpoint answers in English whatever it is sent: practising English is
+  // what this application is for, so the language is the handler's constant
+  // rather than a field a caller may name.
+  it("always asks the model to answer in English", async () => {
     const seen: CapturedRequest[] = [];
     const handler = createAskHandler({
       llm: capturing(createFakeLlmPort({ response: ANSWER }), seen),
@@ -220,7 +203,7 @@ describe("the ask handler", () => {
   });
 
   it.each([
-    ["an object with no prompt", JSON.stringify({ locale: "en" })],
+    ["an object with no prompt", JSON.stringify({ question: "Hi" })],
     ["an empty prompt", JSON.stringify({ prompt: "" })],
     ["a whitespace-only prompt", JSON.stringify({ prompt: "   " })],
     ["a prompt of tabs and newlines", JSON.stringify({ prompt: "\t\n \r\n" })],
@@ -233,8 +216,6 @@ describe("the ask handler", () => {
       JSON.stringify({ prompt: ` ${"a".repeat(MAX_PROMPT_LENGTH + 1)} ` }),
     ],
     ["a non-string prompt", JSON.stringify({ prompt: 42 })],
-    ["a locale this app does not ship", JSON.stringify({ prompt: "Hi", locale: "fr" })],
-    ["a blank locale", JSON.stringify({ prompt: "Hi", locale: "" })],
     ["a JSON array", JSON.stringify([{ prompt: "Hi" }])],
     ["a bare JSON string", JSON.stringify("Hi")],
   ])("rejects %s with ERR_BAD_REQUEST", async (_label, body) => {
@@ -505,7 +486,7 @@ describe("the composed /api/ask route", () => {
   // that the reply is `{answer: <string>}` and not an error envelope is not.
   it("answers a well-formed request with the answer envelope", async () => {
     const composed = await composedWith({
-      ANTHROPIC_API_KEY: undefined,
+      OPENAI_API_KEY: undefined,
       API_ACCESS_KEY: undefined,
     });
 
@@ -545,12 +526,12 @@ describe("the composed /api/ask route", () => {
   }
 
   // Pins the promise README.md and AGENTS.md both make: a fresh checkout with
-  // no ANTHROPIC_API_KEY still answers instead of surfacing ERR_LLM_AUTH as a
+  // no OPENAI_API_KEY still answers instead of surfacing ERR_LLM_AUTH as a
   // 500 (#77), and with no API_ACCESS_KEY it answers an anonymous caller rather
   // than a 401 (#82).
   it("answers 200 with no credential of either kind configured", async () => {
     const composed = await composedWith({
-      ANTHROPIC_API_KEY: undefined,
+      OPENAI_API_KEY: undefined,
       API_ACCESS_KEY: undefined,
     });
 
@@ -562,13 +543,13 @@ describe("the composed /api/ask route", () => {
   });
 
   // What closes the endpoint is the adapter composition.ts wires, not what the
-  // machine exports: a developer who has ANTHROPIC_API_KEY set for something
-  // else -- recording the LLM fixtures under `LLM_RECORD=1` needs it -- still
-  // runs the fake adapter, which bills nothing, so nothing is required and the
+  // machine exports: a developer who has OPENAI_API_KEY set for something
+  // else -- another project on the same machine -- still runs the fake
+  // adapter, which bills nothing, so nothing is required and the
   // quick start still answers (#82).
   it("answers 200 while the fake adapter is wired, whatever provider credential is exported", async () => {
     const composed = await composedWith({
-      ANTHROPIC_API_KEY: "an-example-value",
+      OPENAI_API_KEY: "an-example-value",
       API_ACCESS_KEY: undefined,
     });
 

@@ -8,14 +8,10 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { LOCALES } from "../src/i18n/locales";
-import { MESSAGES } from "../src/i18n/messages";
-
 // The only suite that asks the application a question over HTTP. Every other
 // test here drives one layer through its own surface — a handler with
-// `new Request()`, `src/proxy.ts` as a bare function, a page under jsdom — so
-// nothing else notices when the seams between them come apart: a proxy at a
-// path Next.js does not load, a Route Handler the App Router never mounts, a
+// `new Request()`, a page under jsdom — so nothing else notices when the seams
+// between them come apart: a Route Handler the App Router never mounts, a
 // layout that renders under jsdom and throws in a real render. This starts the
 // built application the way a deployment does — the production build, served by
 // `next start` under `NODE_ENV=production` — and asserts only what a client
@@ -68,7 +64,7 @@ const SHUTDOWN_GRACE_MS = 5_000;
  * nothing under any of them — it writes `.next/` and `next-env.d.ts` — so a
  * source newer than the build means the build is not of that source.
  */
-const BUILD_INPUTS = ["src", "messages", "next.config.ts"];
+const BUILD_INPUTS = ["src", "next.config.ts"];
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -379,112 +375,44 @@ afterAll(async () => {
 });
 
 describe("the built application, served by `next start`", () => {
-  it("prerenders every shipped locale", () => {
-    const routes = readPrerenderedRoutes();
-
-    for (const locale of LOCALES) {
-      expect(routes).toHaveProperty(`/${locale}`);
-    }
+  it("prerenders the home page", () => {
+    expect(readPrerenderedRoutes()).toHaveProperty("/");
   });
 
-  it("redirects a path with no locale prefix to one that has it", async () => {
-    const response = await fetch(baseUrl, {
-      redirect: "manual",
-      headers: { "accept-language": "en" },
-    });
+  it("serves / as a document with the application's metadata", async () => {
+    const response = await fetch(baseUrl);
 
-    expect(response.status).toBe(307);
-    const location = response.headers.get("location");
-    expect(location).not.toBeNull();
-    expect(new URL(location ?? "", baseUrl).pathname).toBe("/en");
-  });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
 
-  it.each(LOCALES)(
-    "serves /%s as a document with localized metadata and language alternates",
-    async (locale) => {
-      const response = await fetch(`${baseUrl}/${locale}`);
-
-      expect(response.status).toBe(200);
-      expect(response.headers.get("content-type")).toContain("text/html");
-      // `<html lang>` is rendered by `src/app/[locale]/layout.tsx`, an async
-      // Server Component no other test in this repository renders.
-      const document = await response.text();
-      expect(document).toMatch(new RegExp(`<html[^>]*\\slang="${locale}"`));
-      expect(document).toContain(`<title>${MESSAGES[locale].Metadata.title}</title>`);
-      expect(document).toContain(
-        `<meta name="description" content="${MESSAGES[locale].Metadata.description}"`,
-      );
-      expect(document).toMatch(
-        new RegExp(
-          `<link(?=[^>]*rel="canonical")(?=[^>]*href="[^"]*/${locale}")[^>]*>`,
-        ),
-      );
-      for (const alternateLocale of LOCALES) {
-        expect(document).toMatch(
-          new RegExp(
-            `<link(?=[^>]*rel="alternate")(?=[^>]*hrefLang="${alternateLocale}")(?=[^>]*href="[^"]*/${alternateLocale}")[^>]*>`,
-          ),
-        );
-      }
-    },
-  );
-
-  it("serves distinct metadata for English and Japanese", async () => {
-    const documents = await Promise.all(
-      LOCALES.map(async (locale) => (await fetch(`${baseUrl}/${locale}`)).text()),
-    );
-
-    expect(documents[0]).not.toContain(`<title>${MESSAGES.ja.Metadata.title}</title>`);
-    expect(documents[0]).not.toContain(
-      `<meta name="description" content="${MESSAGES.ja.Metadata.description}"`,
+    const document = await response.text();
+    expect(document).toMatch(/<html[^>]*\slang="en"/u);
+    expect(document).toContain("<title>Quick Reply Drill</title>");
+    expect(document).toMatch(
+      /<meta name="description" content="[^"]*thirty seconds[^"]*"/u,
     );
   });
 
-  // The two halves of "an unknown route 404s" are asserted apart, and both with
-  // `redirect: "manual"`, because following the redirect merges them: a single
-  // `fetch("/no-such-page")` reports the 404 of `/en/no-such-page` and passes
-  // just as happily if the proxy stopped running and the unprefixed path 404d
-  // on its own — one of the failures this suite exists to catch.
-  it("redirects an unknown path with no locale prefix rather than 404ing it", async () => {
-    const response = await fetch(`${baseUrl}/no-such-page`, {
-      redirect: "manual",
-      headers: { "accept-language": "en" },
-    });
+  it("serves an unknown path as a 404 document in one shell", async () => {
+    const response = await fetch(`${baseUrl}/no-such-page`, { redirect: "manual" });
 
-    expect(response.status).toBe(307);
-    const location = response.headers.get("location");
-    expect(location).not.toBeNull();
-    expect(new URL(location ?? "", baseUrl).pathname).toBe("/en/no-such-page");
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toContain("text/html");
+
+    const document = await response.text();
+    // One `<html>`/`<body>` pair: the bug this catches is a boundary rendering
+    // its own document shell inside the root layout's.
+    expect(document.match(/<html\b/gu)).toHaveLength(1);
+    expect(document.match(/<body\b/gu)).toHaveLength(1);
+    expect(document).toMatch(/<html[^>]*\slang="en"/u);
+    expect(document).toContain("Page not found");
   });
-
-  it.each(LOCALES)(
-    "serves /%s/no-such-page as a localized 404 document",
-    async (locale) => {
-      const response = await fetch(`${baseUrl}/${locale}/no-such-page`, {
-        redirect: "manual",
-      });
-
-      expect(response.status).toBe(404);
-      expect(response.headers.get("content-type")).toContain("text/html");
-
-      const document = await response.text();
-      expect(document.match(/<html\b/g)).toHaveLength(1);
-      expect(document.match(/<body\b/g)).toHaveLength(1);
-      expect(document).toMatch(new RegExp(`<html[^>]*\\slang="${locale}"`));
-      expect(document).toContain(MESSAGES[locale].NotFound.title);
-      expect(document).toContain(MESSAGES[locale].NotFound.description);
-      expect(document).toContain(MESSAGES[locale].NotFound.homeLink);
-
-      const otherLocale = locale === "en" ? "ja" : "en";
-      expect(document).not.toContain(MESSAGES[otherLocale].NotFound.title);
-    },
-  );
 
   it("refuses POST /api/ask without the access key", async () => {
     const response = await fetch(`${baseUrl}/api/ask`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prompt: "Hello", locale: "en" }),
+      body: JSON.stringify({ prompt: "Hello" }),
     });
 
     expect(response.status).toBe(401);
@@ -500,7 +428,7 @@ describe("the built application, served by `next start`", () => {
         "content-type": "application/json",
         authorization: `Bearer ${ACCESS_KEY}`,
       },
-      body: JSON.stringify({ prompt: "Hello", locale: "en" }),
+      body: JSON.stringify({ prompt: "Hello" }),
     });
 
     expect(response.status).toBe(200);

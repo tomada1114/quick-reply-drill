@@ -40,15 +40,29 @@ const INTERNAL_IS_PRIVATE =
   "src/internal/ is private. Tests reach it through the public surface of the module that owns it (see the `writing-tests` skill), and repository automation must not depend on module internals at all.";
 
 /**
- * The Anthropic SDK, under every subpath it publishes.
+ * Every vendor-named language-model SDK, under each subpath it publishes.
  *
  * @remarks
  * `no-restricted-imports` matches the specifier as written and never resolves
  * it, so this ban holds before the package is a dependency and keeps holding
  * if it stops being one. That is what lets the zone boundaries below be
- * stated once, ahead of the adapter that will consume the SDK.
+ * stated once, ahead of the adapter that will consume the SDK — which is the
+ * state this list is in today, the Anthropic adapter and its SDK having been
+ * removed before the OpenAI one exists.
+ *
+ * Only *vendor-named* packages are listed. The Vercel AI SDK's own core (`ai`)
+ * names no vendor, so where it may be imported from is a boundary question
+ * this repository has not settled yet rather than one this list pre-empts.
+ *
+ * `openai` is the one entry that has to be anchored by hand. `no-restricted-imports`
+ * matches through the `ignore` package, where a pattern carrying no slash matches
+ * that name at *any* depth — bare `openai` therefore also catches `./openai` and
+ * `../core/openai/index`, relative specifiers that reach a module of this
+ * repository's own and have nothing to do with a vendor SDK. The leading `/`
+ * anchors it to the whole specifier, which only a bare package name can be. The
+ * scoped entries need no such treatment: they already carry a slash.
  */
-const ANTHROPIC_SDK = ["@anthropic-ai/**"];
+const VENDOR_LLM_SDK = ["/openai", "/openai/**", "@ai-sdk/**", "@anthropic-ai/**"];
 
 /**
  * Each zone under `src/`, as every relative specifier that can reach into it.
@@ -63,9 +77,8 @@ const ANTHROPIC_SDK = ["@anthropic-ai/**"];
  * (`../ai`) has no trailing segment for a trailing globstar to match.
  *
  * The leading `../` is load-bearing, not decoration. An unanchored
- * `**\/server` also matches the package subpath `next-intl/server`, which
- * `src/i18n/request.ts` imports — the anchored form cannot, because a bare
- * specifier never starts with `..` or `.`.
+ * `**\/server` would also match a package subpath such as `next/server` — the
+ * anchored form cannot, because a bare specifier never starts with `..` or `.`.
  *
  * Each entry also carries a `./../**` twin of every `../**` pattern, because
  * `no-restricted-imports` matches the specifier text through the `ignore`
@@ -79,7 +92,6 @@ const ZONE = {
   app: ["../**/app", "../**/app/**", "./../**/app", "./../**/app/**"],
   server: ["../**/server", "../**/server/**", "./../**/server", "./../**/server/**"],
   ai: ["../**/ai", "../**/ai/**", "./../**/ai", "./../**/ai/**"],
-  i18n: ["../**/i18n", "../**/i18n/**", "./../**/i18n", "./../**/i18n/**"],
 };
 
 /**
@@ -107,7 +119,7 @@ const AI_LAYER_IS_PRIVATE =
 
 /** Why the AI layer names no zone above it, stated by two blocks. */
 const AI_LAYER_LOOKS_ONLY_DOWNWARD =
-  "src/ai/ sits below src/server/ and src/app/ in the import order, and src/i18n/ is read by those two rather than by the port. A locale, a request, or a handler concern reaching in here is what stops the layer coming out in one piece — take it as an argument on the LlmPort call instead.";
+  "src/ai/ sits below src/server/ and src/app/ in the import order. A request or a handler concern reaching in here is what stops the layer coming out in one piece — take it as an argument on the LlmPort call instead.";
 
 /** Why a vendor SDK stops at the adapter that wraps it. */
 const VENDOR_SDK_IS_AN_ADAPTERS_BUSINESS =
@@ -218,14 +230,11 @@ export default defineConfig([
     // Next.js finds a page, layout, loading/error boundary or route handler by
     // its file name and reads it through its default export, so `src/app/**`
     // is the one tree where a default export is the interface rather than an
-    // unnamed hole in one. The other two entries are the same case one
-    // directory over: Next.js loads `src/proxy.ts` by that exact path, and
-    // `createNextIntlPlugin` in next.config.ts loads `src/i18n/request.ts` by
-    // that exact path, both reading a default export — so the name is the
-    // file's and the export cannot carry one. All three are framework-owned
-    // entry points, named one by one; everywhere else under `src/` the surface
+    // unnamed hole in one. It is the only such tree now: `src/proxy.ts` and
+    // `src/i18n/request.ts` were the other two framework-owned entry points,
+    // and both left with next-intl. Everywhere else under `src/` the surface
     // stays named exports, which is what a reviewer can read a diff of.
-    ignores: ["src/app/**", "src/i18n/request.ts", "src/proxy.ts"],
+    ignores: ["src/app/**"],
     rules: {
       "no-restricted-exports": [
         "error",
@@ -261,11 +270,9 @@ export default defineConfig([
   },
   // --- zone boundaries -------------------------------------------------------
   //
-  // AGENTS.md states one import order — `app` → `server` → `ai` → `core`, with
-  // `i18n` a leaf the page tree and the handlers read — and the six blocks below
-  // are that order, written per zone as the zones each one may not name. The
-  // leaf property is an edge like any other: `src/i18n/` may read `src/core/`
-  // and nothing above it. On top of the order, `src/app/` and `src/server/`
+  // AGENTS.md states one import order — `app` → `server` → `ai` → `core` — and
+  // the five blocks below are that order, written per zone as the zones each
+  // one may not name. On top of the order, `src/app/` and `src/server/`
   // reach the AI layer only through `src/ai/index.ts`.
   // `tests/boundaries.test.ts` asserts the same shape from the module graph, so
   // deleting a block here still fails the suite.
@@ -292,13 +299,13 @@ export default defineConfig([
                 "react/**",
                 "react-dom",
                 "react-dom/**",
-                ...ANTHROPIC_SDK,
+                ...VENDOR_LLM_SDK,
               ],
               message:
                 "src/core/ holds the vocabulary the other zones are written in — a Result, a domain type, a pure function — and it stays free of the framework and of any vendor SDK so it survives a change of either. Put the framework-aware code in src/app/ or src/server/ and the vendor-aware code behind src/ai/.",
             },
             {
-              group: [...ZONE.ai, ...ZONE.server, ...ZONE.app, ...ZONE.i18n],
+              group: [...ZONE.ai, ...ZONE.server, ...ZONE.app],
               message:
                 "src/core/ is the bottom of the import order app → server → ai → core, so it names no zone above it. A type only one zone needs belongs in that zone; one they share belongs here, with nothing imported to define it.",
             },
@@ -319,7 +326,7 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: [...ZONE.app, ...ZONE.server, ...ZONE.i18n],
+              group: [...ZONE.app, ...ZONE.server],
               message: AI_LAYER_LOOKS_ONLY_DOWNWARD,
             },
           ],
@@ -343,26 +350,8 @@ export default defineConfig([
                 "The port is the interface adapters implement, so it cannot depend on one. An import here inverts the dependency and makes the fake — or the next vendor — impossible to remove.",
             },
             {
-              group: [...ZONE.app, ...ZONE.server, ...ZONE.i18n],
+              group: [...ZONE.app, ...ZONE.server],
               message: AI_LAYER_LOOKS_ONLY_DOWNWARD,
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    name: "boundaries/i18n-is-a-leaf",
-    files: ["src/i18n/**/*.ts", "src/i18n/**/*.tsx"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: [...ZONE.app, ...ZONE.server, ...ZONE.ai],
-              message:
-                "src/i18n/ is a leaf: the page tree and the handlers read it, and it reads nothing but src/core/ and its own catalogs. An import here inverts that and makes the locale list depend on the code that renders it.",
             },
           ],
         },
@@ -382,7 +371,7 @@ export default defineConfig([
               message: AI_LAYER_IS_PRIVATE,
             },
             {
-              group: ANTHROPIC_SDK,
+              group: VENDOR_LLM_SDK,
               message: VENDOR_SDK_IS_AN_ADAPTERS_BUSINESS,
             },
           ],
@@ -403,7 +392,7 @@ export default defineConfig([
               message: AI_LAYER_IS_PRIVATE,
             },
             {
-              group: ANTHROPIC_SDK,
+              group: VENDOR_LLM_SDK,
               message: VENDOR_SDK_IS_AN_ADAPTERS_BUSINESS,
             },
             {

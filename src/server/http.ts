@@ -4,8 +4,8 @@ import { err, ok, type Result } from "../core/result";
  * The most bytes a request body may carry before it is refused part-read.
  *
  * @remarks
- * A Route Handler has nothing in front of it — `src/proxy.ts` matches no `api`
- * path — and a self-hosted `next start` enforces no payload limit of its own,
+ * A Route Handler has nothing in front of it — this application ships no proxy
+ * or middleware — and a self-hosted `next start` enforces no payload limit of its own,
  * which is the deployment this template has to be safe in. 64 KiB is small
  * enough that concurrent requests cannot exhaust memory between them, and
  * comfortably above the largest body an endpoint here accepts: a

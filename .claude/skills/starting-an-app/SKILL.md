@@ -2,22 +2,21 @@
 name: starting-an-app
 description: >
   Covers turning this template into a new application: the copy-and-rename procedure
-  driven by tests/placeholders.test.ts, what a new project keeps untouched, removing the
-  AI layer whole under tests/ai-layer-removal.test.ts, and whether to keep both locales
-  or drop one. Use when starting an app from this repository, replacing the package
-  name, the app's display name or the repository slug in a badge or advisory link,
-  deleting src/ai/ and the route that depends on it, or dropping a locale from
-  src/i18n/locales.ts and messages/.
+  driven by tests/placeholders.test.ts, what a new project keeps untouched, and removing
+  the AI layer whole under tests/ai-layer-removal.test.ts. Use when starting an app from
+  this repository, replacing the package name, the app's display name or the repository
+  slug in a badge or advisory link, or deleting src/ai/ and the route that depends on
+  it.
 ---
 
 # Starting an App
 
 **Owns:** turning this repository into a new application — the rename, what the new app
-keeps, removing the AI layer whole, and the locale decision. **Does not own:** how a
-skill is authored or mirrored (`authoring-skills`); the README's own prose
-(`updating-docs`); what a gate file may contain (`changing-gates`); working inside the
-App Router tree (`building-app-routes`); the port, its adapters, and swapping one
-provider for another (`integrating-llm`).
+keeps, and removing the AI layer whole. **Does not own:** how a skill is authored or
+mirrored (`authoring-skills`); the README's own prose (`updating-docs`); what a gate
+file may contain (`changing-gates`); working inside the App Router tree
+(`building-app-routes`); the port, its adapters, and swapping one provider for another
+(`integrating-llm`).
 
 There is deliberately no bootstrap script. The one this repository used to ship was
 profile-driven machinery that rewrote the tree and then deleted itself, so the only
@@ -31,8 +30,8 @@ Rename first, so nothing downstream is written against the template's identity. 
 the AI layer next — keep it or remove it whole — before writing code of your own:
 removal touches `eslint.config.mjs`, `vitest.config.ts` and AGENTS.md, and doing it once
 your own modules have grown into `src/server/` turns a bounded deletion into a merge.
-Decide the locales last, then run `pnpm check:source` once. Each step below names the
-narrower check to run while you are inside it.
+Then run `pnpm check:source` once. Each step below names the narrower check to run while
+you are inside it.
 
 ## The rename
 
@@ -71,24 +70,16 @@ What goes into each site:
   advisory form.
 - **The copyright holder** in `LICENSE`, and the same name wherever the README repeats
   it. Every fork inherits `LICENSE` verbatim, which is why the template ships a blank.
-- **The app's display name** — the `title` in `src/app/[locale]/layout.tsx`'s
-  `metadata`, which is the browser tab, and the `HomePage.title` key in
-  `messages/en.json` and `messages/ja.json`, which is the page heading. Only the catalog
-  half is per-locale — each catalog gets the name written in its own language; the
-  layout's `title`, like `description` below, is one hard-coded string.
-- **The one-line `description`** in that same `metadata` block, which renders into
-  `<meta name="description">` and so into search results and link previews. It is not
-  per-locale — the layout hard-codes one string for every locale — so there is one site,
-  not one per catalog.
 
-Those are the only reader-visible strings the inventory covers. The home page's body
-text — each catalog's `HomePage.intro` and `HomePage.localeCount`, which still describe
-the page as a template — is deliberately left out: it is demo copy for a demo page you
-are expected to rewrite or delete, so pinning it would pin strings that may not survive
-your first day, and one of them is quoted in `localizing-ui` as a worked example that
-has nothing to do with your identity. Review that copy by hand once the page is yours.
-`tests/home-page.test.tsx` asserts the English `intro` as a literal, so rewriting it
-turns that test red; update the assertion in the same edit.
+Those three are the whole inventory now. The app's display name and its one-line
+description are not in it: `src/app/layout.tsx`'s `metadata` and the heading in
+`src/app/page.tsx` already name this application rather than the template, one
+hard-coded string apiece with no catalog and no per-locale half behind either. Pinning
+them would pin strings that may not survive your first day of writing the real page —
+review the home page's copy by hand once it is yours, the same way you review anything
+else this suite leaves unpinned. `tests/home-page.test.tsx` asserts the heading and the
+description as literals, so rewriting either turns that test red; update the assertion
+in the same edit.
 
 Emptying `EXPECTED_INVENTORY` is the intended edit and is not weakening a gate. Widening
 `SKIPPED_DIRECTORIES` or `SKIPPED_FILES`, or dropping an entry from `PLACEHOLDERS`, to
@@ -139,10 +130,10 @@ procedure:
   wiring a port is the whole of what that file does, `src/app/api` because the one route
   there is the layer's only caller, and the `integrating-llm` skill with its
   `.claude/skills/` mirror because the subject it documents is what leaves.
-- **`AI_LAYER_TOKENS`** — `ANTHROPIC_API_KEY` and `@anthropic-ai`, the two vendor names
-  a file can carry without naming a path. **`AI_LAYER_SYMBOLS`** is the other half: the
-  names this repository gives the layer's own surface, which a document cites as often
-  as it cites a path.
+- **`AI_LAYER_TOKENS`** — `["OPENAI_API_KEY", "@anthropic-ai", "@ai-sdk"]`, the vendor
+  names and the environment variable a file can carry without naming a path.
+  **`AI_LAYER_SYMBOLS`** is the other half: the names this repository gives the layer's
+  own surface, which a document cites as often as it cites a path.
 - **`REMOVED_SKILL_NAMES`** — the bare name of every skill on `REMOVED_PATHS`, derived
   from it rather than listed again; today just `integrating-llm`. Sibling skills
   cross-reference each other by name and never by path, so without this a
@@ -188,58 +179,13 @@ Delete the paths, then work through both edited lists:
   weight nothing reports once this suite is deleted. Several descriptions name a removed
   path today, this skill's own among them.
 - Two are not sentence surgery. `integrating-llm` is deleted rather than edited, its
-  whole subject being the layer; and `localizing-ui` loses its `outputLanguage` section
-  whole, heading included — that seam is the port's, and the UI locale it maps from has
-  nowhere left to reach. The catalogs and the locale routing are untouched, but the
-  section is not the only place `outputLanguage` appears: the skill's frontmatter
-  `description` and its **Owns:** sentence both name the same seam and both need the
-  same edit.
-- This skill loses its "Removing the AI layer" section — it is on
-  `EDITED_DOCUMENT_FILES` because a procedure for deleting something already gone is
-  stale prose. Edit the `.agents/` copy and run `pnpm agents:sync`; never hand-edit the
-  mirror.
+  whole subject being the layer, and its `.claude/skills/` mirror goes with it. And this
+  skill loses its "Removing the AI layer" section — it is on `EDITED_DOCUMENT_FILES`
+  because a procedure for deleting something already gone is stale prose. Edit the
+  `.agents/` copy and run `pnpm agents:sync`; never hand-edit the mirror.
 
 Delete `tests/ai-layer-removal.test.ts` last: it is the checklist while you work, and
 the first dangling reference the moment the paths are gone. The proof that nothing
 dangles afterwards is the gate — `pnpm check:source` type-checks, lints, builds and
 tests the tree that remains, which is exactly the set of failures a stale import, a
 stale zone rule or a stale test would produce.
-
-## The locale decision
-
-The template ships `en` and `ja`. Keeping both costs nothing and is the default; the
-other choice is dropping one, and a third locale is added by reading the same list
-forward. Dropping `ja` touches:
-
-- `src/i18n/locales.ts` — `LOCALES`, which is the closed union everything else derives
-  from.
-- `messages/ja.json`, deleted, and `src/i18n/messages.ts`, which statically imports it
-  and keys `MESSAGES` by locale.
-- `messages/en.json` — the switcher entry naming the dropped language.
-- `src/server/handlers/ask.ts` — `OUTPUT_LANGUAGE_BY_LOCALE`, the one place a UI locale
-  is mapped to the language the model writes in. Only if the AI layer stayed.
-- `tests/messages.test.ts` — its switcher key in `MESSAGE_KEYS`, plus every other place
-  it names the locale literally — and `tests/proxy.test.ts`, `tests/home-page.test.tsx`,
-  and `tests/server-handler.test.ts`, each of which names the locale literally too.
-- `README.md`'s quick start, and AGENTS.md's Conventions exception, which names
-  `messages/ja.json` as the one committed file that is not in English.
-
-`src/proxy.ts` does **not** change: its matcher excludes API routes, framework asset
-trees and paths with an extension, and names no locale at all. `tests/proxy.test.ts`
-does change, because its cases spell one out.
-
-Two of these fail at compile time rather than at runtime, by design:
-`OUTPUT_LANGUAGE_BY_LOCALE` and `MESSAGE_KEYS` are written with `satisfies`, so a locale
-removed from `LOCALES` without its entries removed fails `pnpm typecheck` instead of
-rendering a key as its own name in production — `MESSAGE_KEYS` lives in
-`tests/messages.test.ts` rather than in `src/`, but `tsconfig.json`'s `include` covers
-`tests`, so `pnpm typecheck` type-checks it there too. Check with:
-
-```bash
-pnpm exec vitest run tests/messages.test.ts tests/proxy.test.ts
-```
-
-One locale still means a prefixed URL: `localePrefix` defaults to `"always"` in
-`src/i18n/routing.ts`, so `/` keeps redirecting to `/en`. Changing that is a routing
-decision, not part of the rename, and it is what `tests/proxy.test.ts` asserts either
-way.

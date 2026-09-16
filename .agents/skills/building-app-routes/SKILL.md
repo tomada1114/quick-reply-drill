@@ -4,19 +4,18 @@ description: >
   Covers working inside the Next.js App Router tree: adding a page or a layout under
   src/app/, deciding which file carries a "use client" directive, keeping
   src/app/api/<name>/route.ts a one-line re-export of a Web-standard handler wired in
-  src/server/composition.ts, what belongs in src/proxy.ts, and reading configuration
-  through src/server/env.ts. Use when adding or changing a route, page, layout or Route
-  Handler, editing the proxy matcher, adding an environment variable or a NEXT_PUBLIC_
-  name, or when an unprefixed path 404s while every check stays green.
+  src/server/composition.ts, and reading configuration through src/server/env.ts. Use
+  when adding or changing a route, page, layout or Route Handler, adding an environment
+  variable or a NEXT_PUBLIC_ name, or when a change under src/app/ needs pnpm build to
+  catch it.
 ---
 
 # Building App Routes
 
 **Owns:** what goes where when a request is served — the Server/Client boundary inside
-`src/app/`, the shape of a Route Handler and the handler behind it, `src/proxy.ts`, and
-how configuration reaches any of them. **Does not own:** the `LlmPort` contract and the
-adapter behind it (`integrating-llm`); message catalogs and the locale routing they
-configure (`localizing-ui`); how a test case is written (`writing-tests`) and which
+`src/app/`, the shape of a Route Handler and the handler behind it, and how
+configuration reaches either. **Does not own:** the `LlmPort` contract and the adapter
+behind it (`integrating-llm`); how a test case is written (`writing-tests`) and which
 vitest project it joins (`placing-tests`); TypeScript idiom inside a module
 (`writing-typescript`).
 
@@ -28,8 +27,7 @@ This skill is the procedure for working inside them.
 
 ## The two paths a request takes
 
-A page request passes `src/proxy.ts` (locale detection), then `src/app/layout.tsx`,
-`src/app/[locale]/layout.tsx`, and the page. A JSON request goes to
+A page request reaches `src/app/layout.tsx`, then the page. A JSON request goes to
 `src/app/api/<name>/route.ts`, which re-exports a handler that
 `src/server/composition.ts` built. Deciding where new code goes is mostly deciding which
 of those files is the smallest one that can hold it — and, for anything with logic, the
@@ -38,11 +36,12 @@ answer is almost never a file under `src/app/`.
 ## The Server / Client boundary
 
 Every file under `src/app/` is a Server Component until one says `"use client"`. This
-template ships no such file: `src/app/[locale]/page.tsx` calls `useLocale` and
-`useTranslations` and still runs on the server, because `next-intl` publishes a
-`react-server` export condition and those hooks resolve to a server implementation
-there. A hook is therefore not evidence that a file is a Client Component — the
-directive is, and nothing else is.
+template ships no such file today: nothing under `src/app/` owns state, an effect, or a
+browser API, so the boundary has not had to be drawn yet. Do not treat that as evidence
+the decision is easy when the first one lands — the directive is what makes a file a
+Client Component, not what the file happens to call. A function that only resolves on
+the server, such as reading `cookies()` or `headers()` from `next/headers`, still runs
+there without `"use client"`; the directive is the only thing that flips the boundary.
 
 - Add `"use client"` to the smallest file that actually needs the client: the one owning
   state, an effect, a browser API, or a DOM event handler. Pass it data as props from
@@ -55,24 +54,20 @@ directive is, and nothing else is.
   of inlining a secret into a bundle — but only `pnpm build` sees it, and a handler
   module carries no such marker, so there the rule holds by discipline.
 
-An **asynchronous** Server Component is not unit-tested here. `LocaleLayout` in
-`src/app/[locale]/layout.tsx` awaits its `params`; Testing Library renders on the client
-renderer, which has nothing to resolve that promise with, so a test of it would assert
-against a render production never performs. `vitest.config.ts`'s `component` project
-covers the synchronous case instead — `tests/home-page.test.tsx` renders `HomePage`
-under jsdom and supplies the `NextIntlClientProvider` context a real Server Component
-tree would have provided. Everything asynchronous is checked by `pnpm build` and by
-opening the page.
+An **asynchronous** Server Component is not unit-tested here. Testing Library renders on
+the client renderer, which has nothing to resolve an awaited `params` or a data fetch
+with, so a test of one would assert against a render production never performs.
+`vitest.config.ts`'s `component` project covers the synchronous case instead —
+`tests/home-page.test.tsx` renders `HomePage` directly under jsdom, with no provider to
+supply, since nothing above it in the tree hands a page any context of its own.
+Everything asynchronous is checked by `pnpm build` and by opening the page.
 
 ### Adding a page
 
-The segment goes under `src/app/[locale]/`, not beside it: every page path carries a
-locale prefix, so a route added outside that segment is one the proxy prefixes and the
-tree then fails to match. Link to it with `Link` from `src/i18n/navigation.ts` and an
-unprefixed pathname — `next/link` produces a URL with no locale, which costs a proxy
-redirect round trip and drops the locale the reader was on. Then run `pnpm build` and
-open the page. **BACKGROUND:** `localizing-ui` for the catalog the page reads its
-strings from.
+The segment goes directly under `src/app/`, alongside `layout.tsx` and `page.tsx` — the
+tree is flat, so there is no locale segment to nest a new route inside. Link to it with
+`Link` from `next/link`, the way `src/app/not-found.tsx` links back to the home page.
+Then run `pnpm build` and open the page.
 
 ## A Route Handler is one re-export line
 
@@ -107,9 +102,9 @@ so an added code fails to compile rather than falling through to a default.
 
 ### Who may call it, and how often
 
-An endpoint under `src/app/api/` has nothing in front of it. `src/proxy.ts`'s matcher
-excludes `api` outright, so no middleware runs; whatever the handler does not check, is
-not checked. Two consequences, and they are answered differently.
+An endpoint under `src/app/api/` has nothing in front of it: this repository ships no
+proxy or middleware of any kind, so whatever the handler does not check, is not checked.
+Two consequences, and they are answered differently.
 
 **Authentication is a startup rule, not a per-request decision, and the adapter is what
 triggers it.** `src/server/composition.ts` declares whether the adapter it wires bills a
@@ -124,12 +119,12 @@ read and before the port is reached; a mismatch is `401 ERR_UNAUTHORIZED` with a
 `WWW-Authenticate: Bearer` challenge and a fixed sentence.
 
 Key any gate of this kind off what the composition root wires, never off whether a
-credential is present in `process.env`. The two are not the same question: a machine
-exports `ANTHROPIC_API_KEY` for all sorts of reasons — recording the LLM fixtures under
-`LLM_RECORD=1` is one — while this application still answers from the fake adapter and
-bills no one, and a presence-based gate would refuse to start, build, or load a test
-suite there for nothing. A second provider changes one field of that one declaration and
-nothing else.
+credential is present in `process.env`. The two are not the same question: a machine can
+export `OPENAI_API_KEY` for a reason that has nothing to do with this application —
+another project in the same shell, a credential set once and never cleared — while this
+application still answers from the fake adapter and bills no one, and a presence-based
+gate would refuse to start, build, or load a test suite there for nothing. A second
+provider changes one field of that one declaration and nothing else.
 
 The zero-credential quick start is untouched by all of this: with the fake adapter
 wired, nothing is required and the endpoint answers anyone, which is the promise
@@ -139,10 +134,10 @@ wired, nothing is required and the endpoint answers anyone, which is the promise
 A paid-adapter deployment must enforce its caller-throughput policy in an edge or
 gateway layer before `POST /api/ask` reaches the app. That enforcement point must be
 shared across instances; its exact store, algorithm, caller key, quota, window, and
-concurrency policy belong to the deployment rather than this template. `src/proxy.ts` is
-not the limiter because its matcher excludes `api` paths, so it does not run there. A
-consuming application may add a handler-local limiter for defense in depth, but that is
-not the deployment-wide safeguard and is not part of this issue.
+concurrency policy belong to the deployment rather than this template. This repository
+has no proxy or middleware layer for such a limiter to sit in. A consuming application
+may add a handler-local limiter for defense in depth, but that is not the
+deployment-wide safeguard and is not part of this issue.
 
 **What the endpoint does bound is the size of one request.** `src/server/http.ts` reads
 a JSON body through a wrapper that abandons it once it crosses `MAX_REQUEST_BODY_BYTES`,
@@ -160,39 +155,12 @@ above outlives them — the first endpoint of your own restores the composition 
 until one exists, this section names files that are gone. **BACKGROUND:**
 `starting-an-app`, which owns the removal and lists this skill among the files it edits.
 
-## `src/proxy.ts`
-
-Next.js 16 renamed `middleware.ts` to `proxy.ts`. In this repository that file is
-`src/proxy.ts`, **not** the repository root, because the App Router tree lives under
-`src/` and Next.js looks for the proxy beside it.
-
-This is the trap this section exists for: at the repository root the file is simply
-never loaded, and `pnpm build`, `pnpm lint`, `pnpm typecheck` and `pnpm test` all stay
-green while every unprefixed path 404s. The one check that sees it is
-`pnpm run test:smoke`, which serves the build with `next start` and asks it for `/` —
-and it runs after `pnpm build`, not from `pnpm test`, so a green `pnpm check:quick`
-still proves nothing here. A `/` that 404s under `pnpm dev` while the gate is green is
-this, until proven otherwise.
-
-- What belongs in it: a cheap decision made on the way to a route, for every matching
-  request. Locale detection is the one it ships.
-- What does not: data fetching, a database or model call, anything reading a secret, and
-  anything slow. It runs ahead of every matching request and its cost is paid on all of
-  them.
-- `config.matcher` and the `src/app/[locale]/` segment have to agree — a path the proxy
-  skips never acquires a locale prefix and then 404s against the segment. Both halves
-  are asserted by `tests/proxy.test.ts`; run it whenever you touch either.
-- The file is loaded by exact path through its default export, which is why
-  `eslint.config.mjs` names it beside `src/app/**` and `src/i18n/request.ts` as an
-  exemption to the default-export ban. That exemption list is for framework-owned entry
-  points; a module of your own does not join it.
-
 ## Configuration
 
 `src/server/env.ts` is the only module under `src/` that reads `process.env`. Everything
-else — a page, a component, a handler, the proxy — receives what it needs as an
-argument, wired in `src/server/composition.ts`. That is what makes "where does this
-secret enter the process" a question answered by opening one file.
+else — a page, a component, a handler — receives what it needs as an argument, wired in
+`src/server/composition.ts`. That is what makes "where does this secret enter the
+process" a question answered by opening one file.
 
 - Adding a variable means adding it to the schema in `src/server/env.ts` _and_ to
   `.env.example` with an empty value. `tests/server-env.test.ts` asserts that the two
@@ -229,7 +197,7 @@ AGENTS.md's "Validating a change" table names the narrowest check per file; the 
 worth knowing while working here is what those checks cannot see.
 
 - `pnpm test` never renders the App Router tree and never starts a server. It covers the
-  handler, the proxy's exported matcher and function, and synchronous components.
+  handler and synchronous components.
 - `pnpm typecheck` does not resolve `"use client"`, the `server-only` marker, or the
   export shape a page or route file must have.
 - `pnpm build` is the only check that does, so run it after touching anything under

@@ -111,7 +111,7 @@ const SCANNER_CONTROL = `
 import defaultExport from "next";
 import { named } from "../core/result";
 import "./globals.css";
-import type { OnlyAType } from "@anthropic-ai/sdk";
+import type { OnlyAType } from "@ai-sdk/openai";
 export { re } from "./errors";
 const lazy = await import("../ai/index");
 const legacy = require("node:fs");
@@ -127,17 +127,16 @@ const message = "imported from ../ai/adapters/fake/index by hand";
  * A named subset rather than the whole tree: enumerating every module made the
  * suite fail on each legal new file, which teaches its reader to edit the
  * expectation. Each entry earns its place — three directories deep (the
- * recursion), a `.tsx` inside a bracketed segment (the extension filter and the
- * directory name), a zone holding exactly one module, a file at the root of
- * `src/`, and a nested module in the zone the surface rules are about. What the
+ * recursion), a `.tsx` rather than a `.ts` (the extension filter), a zone
+ * holding exactly one module, and a nested module in the zone the surface
+ * rules are about. What the
  * exhaustive list was really standing in for — a scan that quietly found
  * nothing — is asserted directly by this and by the zone-coverage case below.
  */
 const SCAN_ANCHORS = [
   "src/ai/adapters/fake/index.ts",
-  "src/app/[locale]/page.tsx",
+  "src/app/page.tsx",
   "src/core/result.ts",
-  "src/proxy.ts",
   "src/server/handlers/ask.ts",
 ];
 
@@ -147,7 +146,7 @@ describe("the import scanner the zone assertions run on", () => {
       "next",
       "../core/result",
       "./globals.css",
-      "@anthropic-ai/sdk",
+      "@ai-sdk/openai",
       "./errors",
       "../ai/index",
       "node:fs",
@@ -159,10 +158,7 @@ describe("the import scanner the zone assertions run on", () => {
       "src/ai/adapters/fake/index.ts",
       ["zod", "../../../core/result", "../../errors", "../../port"],
     ],
-    [
-      "src/server/handlers/ask.ts",
-      ["node:crypto", "zod", "../../ai/index", "../../i18n/locales", "../http"],
-    ],
+    ["src/server/handlers/ask.ts", ["node:crypto", "zod", "../../ai/index", "../http"]],
     ["src/app/api/ask/route.ts", ["../../../server/composition"]],
   ])("reads %s as %p", (file, expected) => {
     const module = sourceModules.find((candidate) => candidate.file === file);
@@ -202,18 +198,17 @@ describe("the import scanner the zone assertions run on", () => {
  * Every zone under `src/`, and the zones a module in it may not import.
  *
  * @remarks
- * AGENTS.md's `app → server → ai → core` written as a table, with `i18n` the
- * leaf the page tree and the handlers read. A zone added to `src/` has to be
+ * AGENTS.md's `app → server → ai → core` written as a table. A zone added to
+ * `src/` has to be
  * given a row here before this suite passes, which is the review the table
  * exists to force. `eslint.config.mjs` states the same edges as
  * `no-restricted-imports` groups; the two layers are checked independently, so
  * a rule deleted there still fails here.
  */
 const FORBIDDEN_ZONE_IMPORTS: Readonly<Record<string, readonly string[]>> = {
-  "src/ai": ["src/app", "src/i18n", "src/server"],
+  "src/ai": ["src/app", "src/server"],
   "src/app": [],
-  "src/core": ["src/ai", "src/app", "src/i18n", "src/server"],
-  "src/i18n": ["src/ai", "src/app", "src/server"],
+  "src/core": ["src/ai", "src/app", "src/server"],
   "src/server": ["src/app"],
 };
 
@@ -293,11 +288,13 @@ describe("src/ imports run one way, app → server → ai → core", () => {
     expect(zones).toStrictEqual(Object.keys(FORBIDDEN_ZONE_IMPORTS).sort());
   });
 
-  it("keeps exactly one module at the root of src/, which belongs to no zone", () => {
+  it("keeps no module at the root of src/, so every one belongs to a zone", () => {
+    // `src/proxy.ts` was the one exception, and it left with next-intl. A
+    // module reappearing here is one the zone table above cannot judge.
     const atRoot = sourceModules
       .map((module) => module.file)
       .filter((file) => file.split("/").length === 2);
-    expect(atRoot).toStrictEqual(["src/proxy.ts"]);
+    expect(atRoot).toStrictEqual([]);
   });
 
   it.each(Object.entries(FORBIDDEN_ZONE_IMPORTS))(
@@ -318,11 +315,23 @@ describe("src/ imports run one way, app → server → ai → core", () => {
   });
 });
 
+/**
+ * Every vendor-named language-model SDK, as `eslint.config.mjs` bans them.
+ *
+ * @remarks
+ * Restated here rather than imported, because the point of this suite is that
+ * the two layers are checked independently — a specifier dropped from the
+ * config still fails here. Keep it in step with that file's `VENDOR_LLM_SDK`
+ * by hand. `ai`, the Vercel AI SDK's vendor-neutral core, is absent from both
+ * for the same reason.
+ */
+const VENDOR_SDKS = ["openai", "@ai-sdk", "@anthropic-ai"];
+
 describe("src/core/ is framework-free and vendor-free", () => {
   // The zone holds the vocabulary the other three are written in. A framework
   // or SDK import here makes that vocabulary un-reusable and un-testable
   // without the thing it imported.
-  const forbidden = ["next", "react", "react-dom", "@anthropic-ai"];
+  const forbidden = ["next", "react", "react-dom", ...VENDOR_SDKS];
 
   it.each(forbidden)("imports no %s", (pkg) => {
     const offenders = modulesIn("src/core").flatMap((module) =>
@@ -376,10 +385,10 @@ describe("src/app/ and src/server/ reach the AI layer only through src/ai/index.
     ]);
   });
 
-  it("imports no vendor SDK", () => {
+  it.each(VENDOR_SDKS)("imports no %s", (pkg) => {
     const offenders = modulesIn("src/app", "src/server").flatMap((module) =>
       module.specifiers
-        .filter((specifier) => importsPackage(specifier, "@anthropic-ai"))
+        .filter((specifier) => importsPackage(specifier, pkg))
         .map((specifier) => `${module.file}: ${specifier}`),
     );
     expect(offenders).toStrictEqual([]);
@@ -406,7 +415,7 @@ describe("src/ai/port.ts does not know its adapters", () => {
 // adapter out, provider adapter in — could leave `POST /api/ask` open and
 // billed. The two cannot be moved next to each other: the environment read has
 // to sit between them, because a provider adapter is handed
-// `env.ANTHROPIC_API_KEY`. So the agreement is asserted here instead.
+// `env.OPENAI_API_KEY`. So the agreement is asserted here instead.
 //
 // This lives in this file rather than beside the handler tests for two reasons.
 // It reads a source file off disk with the scanner above, which is what this
@@ -513,7 +522,7 @@ describe("src/server/composition.ts declares the cost of the adapter it wires", 
         import { readServerEnv } from "./env";
         const ADAPTER_BILLS_A_PROVIDER = false;
         const env = readServerEnv({ requiresAccessKey: ADAPTER_BILLS_A_PROVIDER });
-        const llm = createAnthropicAdapter({ apiKey: env.ANTHROPIC_API_KEY });
+        const llm = createProviderAdapter({ apiKey: env.OPENAI_API_KEY });
       `,
       true,
       false,
@@ -552,7 +561,7 @@ describe("src/server/composition.ts declares the cost of the adapter it wires", 
       "a factory named only in a comment, which is not a wiring",
       `
         import { createFakeLlmPort } from "../ai/index";
-        // Swap in createAnthropicAdapter({ apiKey: env.ANTHROPIC_API_KEY }) here.
+        // Swap in createProviderAdapter({ apiKey: env.OPENAI_API_KEY }) here.
         const ADAPTER_BILLS_A_PROVIDER = false;
         const llm = createFakeLlmPort({ response: { answer: "x" } });
       `,
