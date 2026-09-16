@@ -80,4 +80,4 @@ export type Score = (typeof SCORE_LEVELS)[number];
  * bump this value. A stored score is comparable to another only when both
  * records carry the same rubric version.
  */
-export const RUBRIC_VERSION = "2026-09.2";
+export const RUBRIC_VERSION = "2026-09.3";
