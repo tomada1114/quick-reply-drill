@@ -1,74 +1,36 @@
 import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
 import type { ComponentProps, ReactElement } from "react";
 
 import { cn } from "@/components/lib/utils";
 
 // Copied from the shadcn/ui registry (`pnpm dlx shadcn@latest add button`) and
-// kept close to what the CLI writes, so the next `add` is a readable diff
-// rather than a merge. Four edits were made on the way in: the registry's
-// `cn` package and `radix-ui` umbrella are replaced by this repository's own
-// `cn` and by `@radix-ui/react-slot` (see the PR's dependency review); the
-// two components carry the explicit return types this repository's ESLint
-// config requires; and the props type is an `interface extends` rather than
-// the registry's `&` intersection, per the `writing-typescript` skill. The
-// color utilities below name theme tokens that do not exist yet — issue #14
-// declares them in the `@theme` block of `src/app/globals.css`, and restyles
-// these classes to the locked direction the `designing-ui` skill holds.
+// restyled to the "Primary action" recipe in
+// `.agents/skills/designing-ui/references/tokens.md` (issue #14): one filled
+// action per screen. The registry's `destructive`/`outline`/`secondary`/
+// `ghost`/`link` variants and every size but the default are dropped rather
+// than restyled, because none of them has a recipe in the lock — keeping them
+// would mean leaving them pointing at shadcn's own `bg-primary`/`bg-accent`/
+// `ring-ring` tokens, which this theme never defines. The component still
+// carries the explicit return type this repository's ESLint config requires.
+//
+// The label's type is set with three separate arbitrary utilities rather than
+// the `text-body` size utility: `--color-body` also names a color, and
+// Tailwind resolves a bare `text-{name}` as that color whenever one exists
+// with the same name, before it ever considers `--text-{name}` a font size.
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
-        outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-control bg-action px-6 py-2.5 font-sans text-[length:var(--text-body)] leading-[var(--text-body--line-height)] tracking-[var(--text-body--letter-spacing)] font-medium text-paper outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-inset disabled:text-fog [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 );
 
-interface ButtonProps
-  extends ComponentProps<"button">, VariantProps<typeof buttonVariants> {
+interface ButtonProps extends ComponentProps<"button"> {
   asChild?: boolean;
 }
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}: ButtonProps): ReactElement {
+function Button({ className, asChild = false, ...props }: ButtonProps): ReactElement {
   const Comp = asChild ? Slot : "button";
 
   return (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+    <Comp data-slot="button" className={cn(buttonVariants(), className)} {...props} />
   );
 }
 
