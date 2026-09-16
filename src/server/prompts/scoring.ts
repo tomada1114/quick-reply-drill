@@ -58,11 +58,11 @@ export type ScoringOutput = z.infer<typeof scoringOutputSchema>;
  */
 export const MAX_GRADER_PROSE_LENGTH = 300;
 
-/** `value`, cut to {@link MAX_GRADER_PROSE_LENGTH} characters if it runs over. */
+/** `value`, cut to {@link MAX_GRADER_PROSE_LENGTH}, never between a surrogate pair. */
 function truncateProse(value: string): string {
-  return value.length > MAX_GRADER_PROSE_LENGTH
-    ? value.slice(0, MAX_GRADER_PROSE_LENGTH)
-    : value;
+  const last = value.charCodeAt(MAX_GRADER_PROSE_LENGTH - 1);
+  const end = MAX_GRADER_PROSE_LENGTH - (last >= 0xd800 && last <= 0xdbff ? 1 : 0);
+  return value.length > MAX_GRADER_PROSE_LENGTH ? value.slice(0, end) : value;
 }
 
 /**
