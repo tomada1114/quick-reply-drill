@@ -5,22 +5,11 @@ import { cn } from "@/components/lib/utils";
 interface DrillCardProps {
   readonly children: ReactNode;
   readonly className?: string;
-  /**
-   * Whether the countdown is inside its last ten seconds: thickens the card's
-   * top rule to 2px and recolors it to status, per the countdown recipe.
-   */
+  /** Whether the countdown is inside its last ten seconds. */
   readonly urgent?: boolean;
 }
 
-/**
- * The one card every drill, feedback and idle screen renders inside — the
- * `designing-ui` lock's "Card" recipe: white, an 8px radius, the one shadow
- * this system uses, 24px padding (16px below 720px). Below 720px it loses its
- * border, shadow and radius and becomes the page itself, except for the top
- * rule carrying the countdown's status signal, which stays visible at every
- * width because it is the one piece of state a colorblind or grayscale reader
- * still has to see.
- */
+/** The card recipe shared by the drill and dashboard screens. */
 export function DrillCard({
   children,
   className,
@@ -40,7 +29,7 @@ export function DrillCard({
   );
 }
 
-/** The one separator this system uses between a card's zones. */
+/** The separator shared by the drill and dashboard screens. */
 export function DrillDivider(): ReactElement {
   return <div className="border-t border-rule" />;
 }

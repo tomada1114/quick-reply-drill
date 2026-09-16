@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import type { DrillRecord } from "@/core/records";
 import type { WireQuestion } from "@/core/wire";
 
-import { submitForScoring } from "./api";
+import { submitForScoring } from "@/components/shared/api";
 import { buildForcedEmptyRecord, buildScoredRecord } from "./build-record";
 import { DRILL_DURATION_MS } from "./constants";
 

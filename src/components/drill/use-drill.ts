@@ -1,51 +1,20 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
+import { fetchQuestions } from "@/components/shared/api";
 import { createRecordsStore, type RecordStorage } from "@/components/lib/records-store";
 import type { DrillRecord } from "@/core/records";
 import type { WireQuestion } from "@/core/wire";
 
-import { fetchQuestions } from "./api";
 import { DRILL_DURATION_MS } from "./constants";
 import { useCountdown } from "./use-countdown";
-import { useQuestionQueue, type QuestionQueueStatus } from "./use-question-queue";
+import { useQuestionQueue } from "./use-question-queue";
 import { useSubmission } from "./use-submission";
+import type { DrillPhase, UseDrillResult } from "./use-drill-types";
 
-export type DrillPhase = "idle" | "answering" | "scoring" | "feedback";
+export type { DrillPhase, UseDrillResult } from "./use-drill-types";
 
-/**
- * The three phases actually stored: `"answering"` and `"scoring"` are one
- * `"active"` stage here, distinguished only by whether `useSubmission`
- * currently has a request in flight or a failure to show — deriving that
- * split in {@link useDrill}'s return, rather than tracking it as separate
- * state, is what stops the two from ever falling out of sync with each other.
- */
+/** The three phases actually stored by the hook. */
 type Stage = "idle" | "active" | "feedback";
-
-export interface UseDrillResult {
-  readonly phase: DrillPhase;
-  readonly queueStatus: QuestionQueueStatus;
-  readonly queueError: unknown;
-  readonly activeQuestion: WireQuestion | undefined;
-  readonly reply: string;
-  readonly setReply: (value: string) => void;
-  readonly remainingMs: number;
-  readonly scoreError: unknown;
-  readonly submitting: boolean;
-  readonly record: DrillRecord | undefined;
-  readonly previousRecord: DrillRecord | undefined;
-  /**
-   * Set when the most recent {@link DrillRecord} could not be written to
-   * `storage`; `undefined` otherwise. A screen shows this alongside the
-   * feedback it already has — never in place of it, and never as a reason to
-   * re-request a score that already arrived.
-   */
-  readonly recordSaveError: unknown;
-  readonly onStart: () => void;
-  readonly onSend: () => void;
-  readonly onRetryScore: () => void;
-  readonly onRetryQueue: () => void;
-  readonly onNext: () => void;
-}
 
 /**
  * The whole v0.1 loop as one hook: `idle → answering → scoring → feedback`,

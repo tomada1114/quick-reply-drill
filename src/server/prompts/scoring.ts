@@ -1,100 +1,18 @@
-import * as z from "zod";
-
 import { CRITERIA, SCORE_LEVELS, type ItemId } from "../../core/rubric";
 import { RUBRIC_DESCRIPTORS } from "../../core/rubric-descriptors";
-import { scoreCommentsSchema, scoreItemsSchema } from "../../core/wire";
 import { fenceBlock, realRandomUUID, type RandomUUID } from "./fence";
 import { PROMPT_OUTPUT_LANGUAGE, type PromptRequest } from "./request";
+import { MAX_GRADER_PROSE_LENGTH, scoringOutputSchema } from "./scoring-output";
 
-/**
- * The rubric version a score produced by this prompt was graded under.
- *
- * @remarks
- * Re-exported here so the module that builds the request and the module that
- * stores the answer name the same constant. Any wording change in this file —
- * the instructions, the grading rules, the labels the prompt uses — changes
- * what a score means and must bump `RUBRIC_VERSION` in `src/core/rubric.ts`,
- * exactly as a change to a descriptor does.
- */
+export {
+  MAX_GRADER_PROSE_LENGTH,
+  scoringOutputSchema,
+  truncateGraderProse,
+} from "./scoring-output";
+export type { ScoringOutput } from "./scoring-output";
+
+/** The rubric version a score produced by this prompt was graded under. */
 export { RUBRIC_VERSION } from "../../core/rubric";
-
-/**
- * What one graded reply comes back as.
- *
- * @remarks
- * Key order is the order the model writes, so it is the order the decision has
- * to be made in: each item's rationale before its score, every item before the
- * per-criterion comments that summarise them, and the corrected reply last,
- * once the grading it is based on exists. Nothing is optional or nullable —
- * strict structured output rejects both — so an answer that reaches a caller
- * has every field, and a shortfall in *quality* is the prompt's job below.
- *
- * The two grading pieces come from `src/core/wire.ts` rather than being
- * declared here, because `POST /api/score` hands them straight on to its
- * caller: two copies of this shape would be two things to keep in step, and
- * `core` cannot import `server` to get them the other way round.
- */
-export const scoringOutputSchema = z.object({
-  items: scoreItemsSchema,
-  comments: scoreCommentsSchema,
-  modelReply: z.string(),
-});
-
-/** What the grader answers with, once validated against {@link scoringOutputSchema}. */
-export type ScoringOutput = z.infer<typeof scoringOutputSchema>;
-
-/**
- * The character ceiling every item's `rationale` and every criterion's
- * comment is truncated to once the grader has answered.
- *
- * @remarks
- * Its own constant rather than a reuse of `src/core/wire.ts`'s
- * `MAX_DASHBOARD_COMMENT_LENGTH`: that one bounds what `POST /api/dashboard`
- * accepts back from a caller, a different trust boundary from the grader's
- * own prose, and the two would otherwise stay in step only by coincidence of
- * both starting at 300. `GRADING_RULES` states this same number so
- * `truncateGraderProse` is a safety net that almost never has to cut
- * anything, not the normal path a reply takes.
- */
-export const MAX_GRADER_PROSE_LENGTH = 300;
-
-/** `value`, cut to {@link MAX_GRADER_PROSE_LENGTH}, never between a surrogate pair. */
-function truncateProse(value: string): string {
-  const last = value.charCodeAt(MAX_GRADER_PROSE_LENGTH - 1);
-  const end = MAX_GRADER_PROSE_LENGTH - (last >= 0xd800 && last <= 0xdbff ? 1 : 0);
-  return value.length > MAX_GRADER_PROSE_LENGTH ? value.slice(0, end) : value;
-}
-
-/**
- * Bounds every rationale and comment in a graded answer to
- * {@link MAX_GRADER_PROSE_LENGTH}, in place of trusting the model to.
- *
- * @remarks
- * `scoringOutputSchema` carries no `.max()` on these fields on purpose — see
- * the comment beside `scoreItem` in `src/core/wire.ts` for why a length
- * ceiling in the structured-output schema is not safe here. This is the
- * bound instead: applied to the answer once it has already passed schema
- * validation, so `POST /api/score`'s answer — and therefore the
- * `DrillRecord` a caller stores from it — is always within what `POST
- * /api/dashboard` will later accept back.
- */
-export function truncateGraderProse(output: ScoringOutput): ScoringOutput {
-  return {
-    ...output,
-    items: Object.fromEntries(
-      Object.entries(output.items).map(([id, item]) => [
-        id,
-        { ...item, rationale: truncateProse(item.rationale) },
-      ]),
-    ) as ScoringOutput["items"],
-    comments: Object.fromEntries(
-      Object.entries(output.comments).map(([id, comment]) => [
-        id,
-        truncateProse(comment),
-      ]),
-    ) as ScoringOutput["comments"],
-  };
-}
 
 /** The reply being graded, with the situation it was written for. */
 export interface ScoringPromptInput {

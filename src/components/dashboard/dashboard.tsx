@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactElement } from "react";
 
-import { DrillCard } from "@/components/drill/card";
-import { BODY_TEXT_CLASS_NAME } from "@/components/drill/format";
 import { createRecordsStore, type RecordStorage } from "@/components/lib/records-store";
+import { DrillCard } from "@/components/shared/card";
+import { BODY_TEXT_CLASS_NAME } from "@/components/shared/format";
 import type { DrillRecord } from "@/core/records";
 
 import { DashboardContent } from "./dashboard-content";

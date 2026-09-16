@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { CRITERIA } from "@/core/rubric";
 import type { DrillRecord } from "@/core/records";
 import { criterionScores, scoreDelta, totalScore } from "@/core/scoring";
-
-import { DrillCard, DrillDivider } from "./card";
-import { BODY_TEXT_CLASS_NAME } from "./format";
+import { DrillCard, DrillDivider } from "@/components/shared/card";
+import { BODY_TEXT_CLASS_NAME } from "@/components/shared/format";
 
 interface FeedbackProps {
   readonly record: DrillRecord;
