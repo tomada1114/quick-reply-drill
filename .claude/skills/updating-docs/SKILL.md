@@ -13,9 +13,7 @@ description: >
 
 **Owns:** whether a change owes a documentation update, and which surface it lands on.
 **Does not own:** what a TSDoc comment for a given symbol actually says
-(`writing-typescript`); how a skill is authored and mirrored (`authoring-skills`); the
-procedure behind the README's "Starting a new app from this template" section
-(`starting-an-app`).
+(`writing-typescript`); how a skill is authored and mirrored (`authoring-skills`).
 
 ## Decide on observability, not location
 
