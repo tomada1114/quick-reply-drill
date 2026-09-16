@@ -316,25 +316,40 @@ describe("src/ imports run one way, app → server → ai → core", () => {
 });
 
 /**
- * Every vendor-named language-model SDK, as `eslint.config.mjs` bans them.
+ * Every language-model SDK, as `eslint.config.mjs` bans them outside adapters.
  *
  * @remarks
  * Restated here rather than imported, because the point of this suite is that
  * the two layers are checked independently — a specifier dropped from the
- * config still fails here. Keep it in step with that file's `VENDOR_LLM_SDK`
- * by hand. `ai`, the Vercel AI SDK's vendor-neutral core, is absent from both
- * for the same reason.
+ * config still fails here. Keep it in step with that file's `LLM_SDK`
+ * by hand. `ai`, the Vercel AI SDK's vendor-neutral core, is included because
+ * it is still an SDK implementation detail that must stay behind the adapter.
  */
-const VENDOR_SDKS = ["openai", "@ai-sdk", "@anthropic-ai"];
+const LLM_SDKS = ["openai", "@ai-sdk", "@anthropic-ai", "ai"];
 
-describe("src/core/ is framework-free and vendor-free", () => {
+describe("src/core/ is framework-free and language-model-SDK-free", () => {
   // The zone holds the vocabulary the other three are written in. A framework
   // or SDK import here makes that vocabulary un-reusable and un-testable
   // without the thing it imported.
-  const forbidden = ["next", "react", "react-dom", ...VENDOR_SDKS];
+  const forbidden = ["next", "react", "react-dom", ...LLM_SDKS];
 
   it.each(forbidden)("imports no %s", (pkg) => {
     const offenders = modulesIn("src/core").flatMap((module) =>
+      module.specifiers
+        .filter((specifier) => importsPackage(specifier, pkg))
+        .map((specifier) => `${module.file}: ${specifier}`),
+    );
+    expect(offenders).toStrictEqual([]);
+  });
+});
+
+describe("src/ai/ outside adapters imports no language-model SDK", () => {
+  const nonAdapterModules = modulesIn("src/ai").filter(
+    (module) => !module.file.startsWith("src/ai/adapters/"),
+  );
+
+  it.each(LLM_SDKS)("imports no %s", (pkg) => {
+    const offenders = nonAdapterModules.flatMap((module) =>
       module.specifiers
         .filter((specifier) => importsPackage(specifier, pkg))
         .map((specifier) => `${module.file}: ${specifier}`),
@@ -385,7 +400,7 @@ describe("src/app/ and src/server/ reach the AI layer only through src/ai/index.
     ]);
   });
 
-  it.each(VENDOR_SDKS)("imports no %s", (pkg) => {
+  it.each(LLM_SDKS)("imports no %s", (pkg) => {
     const offenders = modulesIn("src/app", "src/server").flatMap((module) =>
       module.specifiers
         .filter((specifier) => importsPackage(specifier, pkg))

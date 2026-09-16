@@ -22,7 +22,10 @@ export interface LlmRequest<TSchema extends z.ZodType> {
   /** The shape the model's answer must match. */
   readonly schema: TSchema;
 
-  /** The instruction sent to the model. */
+  /** The instruction block the model treats as its system-level guidance. */
+  readonly instructions?: string;
+
+  /** The per-request turn sent to the model. */
   readonly prompt: string;
 
   /** BCP 47 tag for the language the model writes its content in. */

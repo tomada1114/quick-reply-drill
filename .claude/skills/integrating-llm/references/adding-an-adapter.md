@@ -7,9 +7,9 @@ had is worth reproducing: five small modules — the client, the request builder
 error mapping, the deadline, and the `generate` that joins them — which is what keeps
 any one of them under the per-file budget `eslint.config.mjs` sets.
 
-Decide first whether an adapter is what you are writing at all. `integrating-llm`'s
-opening section records that whether the Vercel AI SDK sits behind this port or replaces
-it is undecided; settle that before step 1.
+The design keeps `LlmPort` as the vendor-neutral seam. The Vercel AI SDK core and a
+provider SDK are implementation details of the adapter under `src/ai/adapters/`, so the
+adapter must implement the existing port rather than replacing it.
 
 ## Before you start
 
@@ -75,18 +75,14 @@ contract.
 
 ## The gates that know the vendor
 
-- `eslint.config.mjs` — the SDK ban is `VENDOR_LLM_SDK`, a named constant used by three
-  `boundaries/*` blocks. Add the new package to it; keep the blocks' file sets disjoint,
-  as the comment above them requires.
-- `tests/boundaries.test.ts` — its own `VENDOR_SDKS` list, restated rather than imported
-  so the two layers stay independently checkable, plus the exhaustive module list in
-  "walks the whole src/ tree", which fails until every new file is added to it. That
-  failure is intended; it is how a new module is noticed at all.
-- `tests/ai-layer-removal.test.ts` — `AI_LAYER_TOKENS` gains the new package name, and
-  the new environment variable name if there is one. Without that, a file naming the new
-  vendor is invisible to the removal check. `REMOVED_PATHS` gains the adapter's own
-  suite, and any fixture tree or replay helper it reads. `REMOVED_SKILL_NAMES` is
-  derived from `REMOVED_PATHS` and is not edited by hand.
+- `eslint.config.mjs` — the SDK ban is `LLM_SDK`, a named constant used by five
+  `boundaries/*` blocks covering the core, non-adapter AI modules, port, app and server.
+  Add the new package to it; keep the blocks' file sets disjoint, as the comment above
+  them requires.
+- `tests/boundaries.test.ts` — its own `LLM_SDKS` list, restated rather than imported so
+  the two layers stay independently checkable. The scanner walks every `.ts`/`.tsx` file
+  under `src/`; `SCAN_ANCHORS` only proves that the recursive walk reaches
+  representative depths and zones, rather than serving as an exhaustive file list.
 - `tests/ai-vendor-swap.test.ts` — re-create it. It was deleted with the Anthropic
   adapter because every assertion in it named a vendor that no longer appears anywhere;
   the first adapter is what gives it a subject again.

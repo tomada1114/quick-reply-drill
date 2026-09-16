@@ -313,9 +313,8 @@ describe("credentials: checkCredentials", () => {
     [
       // The content layer is what now stands between a committable `.envrc`
       // and a real key in it, so pin that it covers the recognizable shape.
-      // The variable is named generically on purpose: the suite that keeps the
-      // AI layer removable tracks the provider's own env name, so writing it
-      // here would enlist this file in that removal.
+      // The variable is named generically on purpose: this credential-shape
+      // test stays independent of any provider adapter or environment contract.
       "a provider API key exported from a direnv script",
       secretShaped("export LLM_API_KEY=", "sk-ant-", "a".repeat(25)),
       /Anthropic/,

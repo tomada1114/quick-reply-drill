@@ -6,8 +6,7 @@ description: >
   structured-output schema does and does not guarantee, where a request's deadline sits,
   and which ERR_LLM_* code a failure becomes. Use when editing the port, writing the
   first provider adapter, wiring a model call in src/server/composition.ts, swapping or
-  adding a provider, removing the AI layer, or when a call hangs or reaches the network
-  in CI.
+  adding a provider, or when a call hangs or reaches the network in CI.
 ---
 
 # Integrating an LLM
@@ -18,19 +17,19 @@ is enforced, and which `ERR_LLM_*` code a given failure becomes. **Does not own:
 shape of an error class or the `ERR_*` naming vocabulary (`designing-errors` — this
 skill owns only what each `ERR_LLM_*` code _means_ and when an adapter produces it); the
 Route Handler that calls the port and the HTTP status it answers with
-(`building-app-routes`); the removal checklist for the layer as a whole
-(`starting-an-app`); how a test case is written (`writing-tests`) and which project it
-joins (`placing-tests`).
+(`building-app-routes`); how a test case is written (`writing-tests`) and which project
+it joins (`placing-tests`).
 
 Model ids and pricing are deliberately not written down here — they go stale faster than
 a skill is reread.
 
-## No provider adapter ships today
+## The LlmPort seam and the offline fake
 
 The Anthropic adapter this skill was written around has been removed, along with
 `@anthropic-ai/sdk` and its recorded fixtures. What remains under `src/ai/` is the
 vendor-neutral half — `port.ts`, `errors.ts`, `index.ts` — plus `adapters/fake/`, which
-is what `pnpm dev` and every test answer from.
+is what `pnpm dev` and every test answer from today. The settled design keeps `LlmPort`
+as the vendor-neutral seam and puts the Vercel AI SDK behind it in an adapter.
 
 So the sections below state the rules a first adapter has to meet, and no longer point
 at code that implements them. Two consequences worth naming before you start:
@@ -39,18 +38,18 @@ at code that implements them. Two consequences worth naming before you start:
   no real provider could implement, so nothing today proves `LlmPort` is genuinely
   vendor-neutral. The first provider adapter is what supplies that evidence, by running
   `describeLlmPortContract` against a second implementation.
-- **How an adapter is tested offline is an open question.** The removed one substituted
-  the SDK's `fetch` and replayed recorded exchanges. Whatever replaces it must keep the
-  same two properties: CI never reaches the network, and the adapter under test is the
-  real one rather than a mock of it.
+- **How an adapter is tested offline is a separate adapter concern.** The removed one
+  substituted the SDK's `fetch` and replayed recorded exchanges. Whatever replaces it
+  must keep the same two properties: CI never reaches the network, and the adapter under
+  test is the real one rather than a mock of it.
 
 ## Port or adapter
 
-`src/ai/port.ts` is the whole vendor-neutral vocabulary: a schema, a prompt, a BCP 47
-`outputLanguage`, an optional `AbortSignal`, and a `generate` that resolves to a
-`Result`. Read its TSDoc first — it states the two promises every implementation makes,
-never throwing for an expected failure and always settling, and those are what a new
-adapter is measured against.
+`src/ai/port.ts` is the whole vendor-neutral vocabulary: a schema, optional system-level
+instructions, a per-request prompt, a BCP 47 `outputLanguage`, an optional
+`AbortSignal`, and a `generate` that resolves to a `Result`. Read its TSDoc first — it
+states the two promises every implementation makes, never throwing for an expected
+failure and always settling, and those are what a new adapter is measured against.
 
 Everything a provider needs that the port does not name — a model id, a token ceiling, a
 per-attempt timeout, a retry count, an HTTP client, a reasoning effort — is
@@ -59,19 +58,20 @@ test for where a new knob goes: on `LlmRequest` it would make the same request
 un-runnable against the fake, and the fake is what the contract suite and `pnpm dev` run
 on.
 
-A vendor-named SDK is importable **only** under `src/ai/adapters/`. Enforced by
-`eslint.config.mjs`'s `VENDOR_LLM_SDK` list inside its `boundaries/*` blocks, asserted
-again from the module graph by `tests/boundaries.test.ts`. Those gates cover
-`src/core/`, `src/app/` and `src/server/` and not inside `src/ai/` itself, where the
-rule is yours to hold and matters most: `src/ai/port.ts`, `errors.ts`, `index.ts` and
-the fake adapter must stay SDK-free, or the port stops being an interface a second
-vendor could implement. `src/ai/index.ts` is the layer's whole surface, and
-`src/server/composition.ts` the single line choosing a vendor.
+A language-model SDK is importable **only** under `src/ai/adapters/`. Enforced by
+`eslint.config.mjs`'s `LLM_SDK` list inside its `boundaries/*` blocks, asserted again
+from the module graph by `tests/boundaries.test.ts`. Those gates cover `src/core/`, the
+non-adapter modules under `src/ai/`, `src/app/` and `src/server/`. The separate zone
+rule still covers the adapter subtree, so an adapter may use its SDK but cannot reach up
+to `src/app/` or `src/server/`. `src/ai/port.ts`, `errors.ts` and `index.ts` must stay
+SDK-free, or the port stops being an interface a second vendor could implement.
+`src/ai/index.ts` is the layer's whole surface, and `src/server/composition.ts` the
+single line choosing a vendor.
 
-`ai`, the Vercel AI SDK's vendor-neutral core, is deliberately absent from that ban: it
-names no vendor, and whether it may be imported above `src/ai/` — or whether it replaces
-the port outright — has not been decided. Decide it before writing the first adapter,
-not by writing one.
+`ai`, the Vercel AI SDK's vendor-neutral core, is included in that ban outside
+`src/ai/adapters/`. It names no vendor, but it is still an implementation detail; the
+port remains the application-facing seam and adapters are the only place that may use
+the SDK.
 
 ## Two layers of structured output, and only one is guaranteed
 
@@ -201,12 +201,11 @@ has nothing to stream. Revisit that with the design, not with a speculative adap
 
 Keeping the port and replacing what answers behind it is the **common** path, and it is
 a bounded edit rather than a rewrite. Two lines of application code decide it.
-`src/server/composition.ts` chooses the adapter and flips `ADAPTER_BILLS_A_PROVIDER` in
-the same commit; `src/ai/index.ts` republishes whichever adapter the layer is willing to
-expose. `src/server/env.ts` names the credential, and the rest is manifests and gate
-configs — the dependency, the import restriction, the environment example, the
-automation-test list. A fourth module joining them is the moment the choice of vendor
-has escaped the composition root.
+`src/server/composition.ts` chooses the adapter; `src/ai/index.ts` republishes whichever
+adapter the layer is willing to expose. `src/server/env.ts` names the credential, and
+the rest is manifests and gate configs — the dependency, the import restriction, the
+environment example, the automation-test list. A fourth module joining them is the
+moment the choice of vendor has escaped the composition root.
 
 Untouched: `src/ai/port.ts`, `src/ai/errors.ts` and the fake adapter — the whole
 vendor-neutral vocabulary, and the reason the edit is bounded at all — plus the handler,
@@ -216,17 +215,3 @@ which only ever sees an `LlmPort`, and everything above it.
 deleted with the adapter, because every assertion in it was keyed to a vendor that is no
 longer named anywhere. Re-create it with the first provider adapter; until then this
 section is prose a reviewer applies rather than a gate.
-
-## Removing the layer
-
-Three properties let the layer come out in one piece: adapters are private to `src/ai/`,
-`src/ai/index.ts` is the only way anything above reaches them, and
-`src/server/composition.ts` is the only line _choosing_ a vendor. The same three are
-what make the swap above bounded, so an edit that quietly ends one costs both paths at
-once.
-
-`tests/ai-layer-removal.test.ts` is the specification, checkable only while the layer is
-still present — run it before deleting anything. It names the paths the removal deletes
-(this skill among them), the tokens that name the vendor without naming a path, the
-names the removed skills are cross-referenced by, and the files that survive but must be
-edited. **REQUIRED:** `starting-an-app`, which owns the procedure itself.

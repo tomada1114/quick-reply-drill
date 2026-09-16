@@ -23,7 +23,7 @@ checked.
 A Next.js application on the App Router, written in ESM-only TypeScript: a page tree,
 one JSON endpoint, and one language-model call behind a port that an adapter implements.
 It answers with a fake adapter out of the box, so `pnpm dev` works before any credential
-exists, and the whole AI layer is built to come out in one piece.
+exists, and the AI layer keeps provider-specific code behind that port.
 
 It grew out of a template, and the template's locale-prefixed page tree, its `next-intl`
 message catalogs and its Anthropic adapter have been removed: this application ships one
@@ -116,9 +116,8 @@ three seams:
 - **The port.** `src/ai/port.ts` declares `LlmPort`, the vendor-neutral interface every
   model call goes through, and `src/ai/index.ts` is the AI layer's whole surface — the
   port, its error vocabulary, and whichever adapter that file chooses to publish.
-  `src/ai/adapters/` is private to the layer, so swapping the fake for a provider, or
-  deleting the layer outright, is a bounded edit; `tests/ai-layer-removal.test.ts` is
-  what keeps the deletion bounded rather than trusting that it stays so.
+  `src/ai/adapters/` is private to the layer, so swapping the fake for a provider is a
+  bounded edit and vendor-specific code does not leak into callers.
 - **The Web-standard handler.** `src/server/handlers/ask.ts` exports
   `createAskHandler(dependencies)`, which returns a plain
   `(request: Request) => Promise<Response>` and imports nothing from `next`. That is
