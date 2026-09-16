@@ -53,8 +53,16 @@ const INTERNAL_IS_PRIVATE =
  * Only *vendor-named* packages are listed. The Vercel AI SDK's own core (`ai`)
  * names no vendor, so where it may be imported from is a boundary question
  * this repository has not settled yet rather than one this list pre-empts.
+ *
+ * `openai` is the one entry that has to be anchored by hand. `no-restricted-imports`
+ * matches through the `ignore` package, where a pattern carrying no slash matches
+ * that name at *any* depth — bare `openai` therefore also catches `./openai` and
+ * `../core/openai/index`, relative specifiers that reach a module of this
+ * repository's own and have nothing to do with a vendor SDK. The leading `/`
+ * anchors it to the whole specifier, which only a bare package name can be. The
+ * scoped entries need no such treatment: they already carry a slash.
  */
-const VENDOR_LLM_SDK = ["openai", "openai/**", "@ai-sdk/**", "@anthropic-ai/**"];
+const VENDOR_LLM_SDK = ["/openai", "/openai/**", "@ai-sdk/**", "@anthropic-ai/**"];
 
 /**
  * Each zone under `src/`, as every relative specifier that can reach into it.
