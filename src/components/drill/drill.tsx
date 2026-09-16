@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactElement } from "react";
 
 import type { RecordStorage } from "@/components/lib/records-store";
@@ -23,7 +24,7 @@ export function Drill({ storage }: DrillProps): ReactElement {
   const drill = useDrill(storage);
 
   return (
-    <main className="flex min-h-[70svh] flex-col items-center justify-center">
+    <main className="flex min-h-[70svh] flex-col items-center justify-center gap-3">
       <div className="w-full max-w-[720px]">
         {drill.phase === "idle" ? (
           <IdleScreen
@@ -56,6 +57,9 @@ export function Drill({ storage }: DrillProps): ReactElement {
           />
         ) : null}
       </div>
+      <Link href="/dashboard" className="font-sans text-caption">
+        View your dashboard
+      </Link>
     </main>
   );
 }

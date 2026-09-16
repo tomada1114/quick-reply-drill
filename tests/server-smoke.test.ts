@@ -404,6 +404,21 @@ describe("the built application, served by `next start`", () => {
     expect(readPrerenderedRoutes()).toHaveProperty("/");
   });
 
+  it("prerenders the dashboard page", () => {
+    expect(readPrerenderedRoutes()).toHaveProperty("/dashboard");
+  });
+
+  it("serves /dashboard as a document with the dashboard's own title", async () => {
+    const response = await fetch(`${baseUrl}/dashboard`);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
+
+    const document = await response.text();
+    expect(document).toMatch(/<html[^>]*\slang="en"/u);
+    expect(document).toContain("<title>Dashboard</title>");
+  });
+
   it("serves / as a document with the application's metadata", async () => {
     const response = await fetch(baseUrl);
 

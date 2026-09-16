@@ -155,6 +155,16 @@ describe("Drill", () => {
     vi.useRealTimers();
   });
 
+  it("links to the dashboard, under the card and outside it", async () => {
+    stubFetch();
+    await renderDrill(new MapStorage());
+
+    expect(screen.getByRole("link", { name: "View your dashboard" })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
+  });
+
   it("shows the first question and the clock once Start is pressed", async () => {
     stubFetch();
     await renderDrill(new MapStorage());
