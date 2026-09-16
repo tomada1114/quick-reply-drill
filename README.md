@@ -2,12 +2,12 @@
 
 [![CI](https://github.com/tomada1114/quick-reply-drill/actions/workflows/ci.yml/badge.svg)](https://github.com/tomada1114/quick-reply-drill/actions/workflows/ci.yml)
 
-Answer a one-line English question in thirty seconds, and get it scored the same way
+Answer a one-line English question in sixty seconds, and get it scored the same way
 every time.
 
 ## What this is
 
-The drill asks a one-line English question, gives you thirty seconds to answer it, and
+The drill asks a one-line English question, gives you sixty seconds to answer it, and
 grades the reply against a fixed eight-item rubric — a score and a rationale per item,
 one comment per criterion, and a corrected version of what you wrote — before drawing
 the next question. Every finished rep is saved to the browser's own storage, and the

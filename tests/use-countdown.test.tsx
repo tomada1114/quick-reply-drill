@@ -17,16 +17,16 @@ describe("useCountdown", () => {
 
   it("reports the full duration and is not running before start()", () => {
     const onExpire = vi.fn();
-    const { result } = renderHook(() => useCountdown({ durationMs: 30_000, onExpire }));
+    const { result } = renderHook(() => useCountdown({ durationMs: 60_000, onExpire }));
 
-    expect(result.current.remainingMs).toBe(30_000);
+    expect(result.current.remainingMs).toBe(60_000);
     expect(result.current.running).toBe(false);
     expect(onExpire).not.toHaveBeenCalled();
   });
 
-  it("counts down from 30 000 as time passes after start()", () => {
+  it("counts down from 60 000 as time passes after start()", () => {
     const onExpire = vi.fn();
-    const { result } = renderHook(() => useCountdown({ durationMs: 30_000, onExpire }));
+    const { result } = renderHook(() => useCountdown({ durationMs: 60_000, onExpire }));
 
     act(() => {
       result.current.start();
@@ -37,22 +37,22 @@ describe("useCountdown", () => {
       vi.advanceTimersByTime(12_000);
     });
 
-    expect(result.current.remainingMs).toBe(18_000);
+    expect(result.current.remainingMs).toBe(48_000);
     expect(onExpire).not.toHaveBeenCalled();
   });
 
   it("fires onExpire exactly once when the system clock jumps past the deadline in a single tick", () => {
     const onExpire = vi.fn();
-    const { result } = renderHook(() => useCountdown({ durationMs: 30_000, onExpire }));
+    const { result } = renderHook(() => useCountdown({ durationMs: 60_000, onExpire }));
 
     act(() => {
       result.current.start();
     });
 
-    // A throttled background tab: the wall clock advances 31s but only one
+    // A throttled background tab: the wall clock advances 61s but only one
     // 100ms interval tick actually runs.
     act(() => {
-      vi.setSystemTime(new Date(START_TIME.getTime() + 31_000));
+      vi.setSystemTime(new Date(START_TIME.getTime() + 61_000));
       vi.advanceTimersByTime(100);
     });
 
@@ -69,14 +69,14 @@ describe("useCountdown", () => {
 
   it("recomputes on visibilitychange, firing onExpire immediately if the deadline already passed", () => {
     const onExpire = vi.fn();
-    const { result } = renderHook(() => useCountdown({ durationMs: 30_000, onExpire }));
+    const { result } = renderHook(() => useCountdown({ durationMs: 60_000, onExpire }));
 
     act(() => {
       result.current.start();
     });
 
     act(() => {
-      vi.setSystemTime(new Date(START_TIME.getTime() + 31_000));
+      vi.setSystemTime(new Date(START_TIME.getTime() + 61_000));
       document.dispatchEvent(new Event("visibilitychange"));
     });
 
@@ -86,7 +86,7 @@ describe("useCountdown", () => {
 
   it("never fires onExpire when stop() is called before zero", () => {
     const onExpire = vi.fn();
-    const { result } = renderHook(() => useCountdown({ durationMs: 30_000, onExpire }));
+    const { result } = renderHook(() => useCountdown({ durationMs: 60_000, onExpire }));
 
     act(() => {
       result.current.start();
@@ -101,7 +101,7 @@ describe("useCountdown", () => {
     expect(result.current.running).toBe(false);
 
     act(() => {
-      vi.advanceTimersByTime(30_000);
+      vi.advanceTimersByTime(60_000);
     });
     expect(onExpire).not.toHaveBeenCalled();
 
@@ -115,17 +115,17 @@ describe("useCountdown", () => {
 
   it("fires onExpire exactly once per start(), even across a restart", () => {
     const onExpire = vi.fn();
-    const { result } = renderHook(() => useCountdown({ durationMs: 30_000, onExpire }));
+    const { result } = renderHook(() => useCountdown({ durationMs: 60_000, onExpire }));
 
     act(() => {
       result.current.start();
-      vi.advanceTimersByTime(30_100);
+      vi.advanceTimersByTime(60_100);
     });
     expect(onExpire).toHaveBeenCalledTimes(1);
 
     act(() => {
       result.current.start();
-      vi.advanceTimersByTime(30_100);
+      vi.advanceTimersByTime(60_100);
     });
     expect(onExpire).toHaveBeenCalledTimes(2);
   });
@@ -135,7 +135,7 @@ describe("useCountdown", () => {
     const { result, rerender } = renderHook(
       ({ tag }: { tag: string }) =>
         useCountdown({
-          durationMs: 30_000,
+          durationMs: 60_000,
           onExpire: () => onExpireCalls.push(tag),
         }),
       { initialProps: { tag: "first" } },
@@ -151,7 +151,7 @@ describe("useCountdown", () => {
     rerender({ tag: "second" });
 
     act(() => {
-      vi.advanceTimersByTime(30_000);
+      vi.advanceTimersByTime(60_000);
     });
 
     expect(onExpireCalls).toEqual(["second"]);
@@ -160,7 +160,7 @@ describe("useCountdown", () => {
   it("clears the interval on unmount", () => {
     const onExpire = vi.fn();
     const { result, unmount } = renderHook(() =>
-      useCountdown({ durationMs: 30_000, onExpire }),
+      useCountdown({ durationMs: 60_000, onExpire }),
     );
 
     act(() => {

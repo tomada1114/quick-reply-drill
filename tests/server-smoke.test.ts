@@ -429,7 +429,7 @@ describe("the built application, served by `next start`", () => {
     expect(document).toMatch(/<html[^>]*\slang="en"/u);
     expect(document).toContain("<title>Quick Reply Drill</title>");
     expect(document).toMatch(
-      /<meta name="description" content="[^"]*thirty seconds[^"]*"/u,
+      /<meta name="description" content="[^"]*sixty seconds[^"]*"/u,
     );
   });
 

@@ -21,7 +21,7 @@ checked.
 ## Overview
 
 A Next.js application on the App Router, written in ESM-only TypeScript: the drill — one
-question, a thirty-second reply, a rubric-graded feedback screen, then the next question
+question, a sixty-second reply, a rubric-graded feedback screen, then the next question
 — the dashboard that reads a learner's own stored history back, three JSON endpoints,
 and every language-model call behind a port that an adapter implements. A missing
 credential stops nothing from starting — `pnpm dev` runs and the pages render, and an
