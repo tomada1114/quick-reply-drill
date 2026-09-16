@@ -33,6 +33,10 @@ interface DashboardProps {
  * `react-hooks/set-state-in-effect`'s cascading-render warning, and the
  * `cancelled` guard keeps a slow test or a fast unmount from calling
  * `setRecords` after this component is gone.
+ *
+ * `list()` itself never throws — a blocked or failing `storage.getItem`
+ * reads as no history rather than a crashed page or a "Loading…" that never
+ * resolves — so this caller needs no guard of its own around it.
  */
 export function Dashboard({ storage }: DashboardProps): ReactElement {
   const [records, setRecords] = useState<DrillRecord[] | undefined>(undefined);
@@ -43,16 +47,7 @@ export function Dashboard({ storage }: DashboardProps): ReactElement {
       if (cancelled) {
         return;
       }
-      // Blocked site data throws from the `window.localStorage` getter itself,
-      // and a failing store throws from `getItem`; either reads as no history
-      // rather than a crashed page or a "Loading…" that never resolves.
-      let list: DrillRecord[];
-      try {
-        list = createRecordsStore(storage ?? window.localStorage).list();
-      } catch {
-        list = [];
-      }
-      setRecords(list);
+      setRecords(createRecordsStore(storage ?? window.localStorage).list());
     });
     return () => {
       cancelled = true;
