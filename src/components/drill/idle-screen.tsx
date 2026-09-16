@@ -45,12 +45,12 @@ export function IdleScreen({
           {failed ? "Retry" : "Start"}
         </Button>
         {failed ? (
-          <p className="font-sans text-caption text-slate">
+          <p className="mb-0 font-sans text-caption text-slate">
             {describeApiError(error, "The question queue did not load")}
           </p>
         ) : null}
         {waiting ? (
-          <p className="font-sans text-caption text-slate">Loading questions…</p>
+          <p className="mb-0 font-sans text-caption text-slate">Loading questions…</p>
         ) : null}
       </div>
     </DrillCard>
