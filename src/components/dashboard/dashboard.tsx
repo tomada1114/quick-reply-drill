@@ -36,7 +36,11 @@ interface DashboardProps {
  *
  * `list()` itself never throws — a blocked or failing `storage.getItem`
  * reads as no history rather than a crashed page or a "Loading…" that never
- * resolves — so this caller needs no guard of its own around it.
+ * resolves — so this caller needs no guard around that call. Resolving the
+ * default storage is a separate hazard `list()` cannot absorb: blocked site
+ * data throws `SecurityError` from the `window.localStorage` getter itself,
+ * before `createRecordsStore` ever runs, so this caller still guards that one
+ * step.
  */
 export function Dashboard({ storage }: DashboardProps): ReactElement {
   const [records, setRecords] = useState<DrillRecord[] | undefined>(undefined);
@@ -47,7 +51,14 @@ export function Dashboard({ storage }: DashboardProps): ReactElement {
       if (cancelled) {
         return;
       }
-      setRecords(createRecordsStore(storage ?? window.localStorage).list());
+      let resolvedStorage: RecordStorage;
+      try {
+        resolvedStorage = storage ?? window.localStorage;
+      } catch {
+        setRecords([]);
+        return;
+      }
+      setRecords(createRecordsStore(resolvedStorage).list());
     });
     return () => {
       cancelled = true;
