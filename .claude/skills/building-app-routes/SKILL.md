@@ -115,7 +115,7 @@ hand.
 `package.json` binds both `dev` and `start` to `127.0.0.1`, which keeps other machines
 off this local server. When the app is deployed, add access control in front of it —
 Vercel Deployment Protection or a one-time passphrase that sets an `httpOnly` cookie —
-and keep the handler guard unchanged. This template also ships no rate limit or
+and keep the handler guard unchanged. This application also ships no rate limit or
 concurrency limit; a deployment must enforce shared caller-throughput policy at its edge
 or gateway rather than in one process.
 
