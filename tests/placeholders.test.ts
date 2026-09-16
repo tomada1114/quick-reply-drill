@@ -2,24 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { readText, repoRoot, walk } from "./repo-tree";
 
-// The template ships with its identity written out as placeholder strings —
-// a package name, a repository slug, an author, a one-line description, the
-// name a visitor reads — which whoever starts an app from it replaces.
-// `scripts/bootstrap.mjs` used to hold both halves of that: the rewrite and
-// the check that no placeholder survived it. Issue #26 removed the rewrite
-// (it was profile-driven machinery that self-deleted), and the check went
-// with it, leaving nothing that notices a placeholder leaking into a file
-// that has no business carrying one.
-//
-// This is that check, rebuilt as a test over the real tree. It pins the
-// complete inventory rather than merely forbidding placeholders: a new file
-// that picks one up fails, and so does an inventory entry that has gone stale,
-// which is what makes this list usable as the rename checklist a new app
-// works through. A new app replaces each site the inventory names below and
-// deletes that row from EXPECTED_INVENTORY; it is finished when the list is
-// empty and this suite is green — an empty list then means no identity string
-// of this template survived. `starting-an-app` owns the order and the values
-// to write in; this file owns the list.
+// This suite guards against the former template's identity strings — a
+// package name, a repository slug, an author, a one-line description —
+// leaking back into this repository. It pins the complete inventory of where
+// each PLACEHOLDERS entry appears rather than merely forbidding them: a file
+// that picks one up fails, and so does an inventory entry that has gone
+// stale. `scripts/bootstrap.mjs` used to hold both the rewrite and this
+// check; issue #26 removed the rewrite (it was profile-driven machinery that
+// self-deleted), leaving this test as the only thing that still notices a
+// placeholder appearing where it has no business being.
 
 /**
  * Every string that names *this template* rather than a project built from it.
@@ -30,11 +21,10 @@ import { readText, repoRoot, walk } from "./repo-tree";
  * reintroducing either should fail here rather than ship. A token that
  * matches nothing simply contributes no rows to the inventory below.
  *
- * `tomada1114/nextjs-app-template` is not a blank like the others — it is
- * this template's real repository slug, and it names this template just as
- * literally as `my-package` does. A fork that keeps it points its CI badge
- * and its vulnerability-report link at someone else's repository. Only the
- * full slug is listed: a bare `tomada1114` would match
+ * `tomada1114/nextjs-app-template` is not a blank like the others — it is the
+ * former template's real repository slug, kept here so a leaked identity
+ * string is caught if it ever reappears in this repository. Only the full
+ * slug is listed: a bare `tomada1114` would match
  * `tests/sync-labels.test.ts`'s `tomada1114/typescript-template` fixture
  * data, and a bare `nextjs-app-template` would produce a duplicate row per
  * file that carries the full slug.
@@ -60,27 +50,11 @@ const PLACEHOLDERS = [
  * `<file>: <placeholder>` rows.
  *
  * @remarks
- * These four files *are* the template's identity, so a placeholder in them is
- * intended, not a leak: they are what a new app rewrites first. Each carries
- * some of the repository's identity — the package name and description, the
- * slug, the copyright holder. Everything else in the tree — `src/`, `tests/`,
- * `scripts/`, the skills, the workflows, `CONTRIBUTING.md`, `AGENTS.md` — must
- * name nothing of the sort, so the rename is a bounded edit to four files
- * rather than a repository-wide search that can miss one. Two of the rows are the template's
- * real repository slug rather than a blank, deliberately: the CI badge and the
- * security-advisory link have to resolve *while this repository is the
- * template*, and a fork replaces them like any other row.
+ * Empty because the rename is complete: nothing in the tree still carries the
+ * template's identity. Any row this array gained back would be a regression —
+ * PLACEHOLDERS above is what would catch it.
  */
-const EXPECTED_INVENTORY = [
-  ".github/ISSUE_TEMPLATE/config.yml: tomada1114/nextjs-app-template",
-  "LICENSE: Your Name",
-  "README.md: A short description.",
-  "README.md: Your Name",
-  "README.md: my-package",
-  "README.md: tomada1114/nextjs-app-template",
-  "package.json: A short description.",
-  "package.json: my-package",
-];
+const EXPECTED_INVENTORY: readonly string[] = [];
 
 /**
  * This file, which necessarily spells out every placeholder it looks for.
@@ -135,19 +109,17 @@ describe("the template's own identity strings", () => {
 describe("the badge and advisory URLs", () => {
   // The inventory above only proves the slug appears *somewhere* in each file;
   // it would pass on a badge URL missing its workflow filename. This pins both
-  // URLs by their shape instead — path segments and filename — with owner and
-  // repository left open on purpose: a renamed project writes its own slug in,
-  // and pinning this template's would make the rename `starting-an-app`
-  // documents impossible to finish with a green suite. The slug itself is the
-  // inventory's job, one row per file.
+  // URLs by their shape *and* by this repository's own slug — the rename is
+  // complete, so nothing here is meant to resolve against any other
+  // owner/repository.
   it.each([
     [
       "README.md",
-      /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/actions\/workflows\/ci\.yml/,
+      /https:\/\/github\.com\/tomada1114\/quick-reply-drill\/actions\/workflows\/ci\.yml/,
     ],
     [
       ".github/ISSUE_TEMPLATE/config.yml",
-      /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/security\/advisories\/new/,
+      /https:\/\/github\.com\/tomada1114\/quick-reply-drill\/security\/advisories\/new/,
     ],
   ])("%s carries a well-formed repository URL", (relative, pattern) => {
     expect(readText(relative)).toMatch(pattern);
