@@ -7,14 +7,17 @@ import {
   ITEM_IDS,
   RUBRIC_VERSION as CORE_RUBRIC_VERSION,
   SCORE_LEVELS,
+  type CriterionId,
   type ItemId,
   type Score,
 } from "../src/core/rubric";
 import { RUBRIC_DESCRIPTORS } from "../src/core/rubric-descriptors";
 import {
   buildScoringRequest,
+  MAX_GRADER_PROSE_LENGTH,
   RUBRIC_VERSION,
   scoringOutputSchema,
+  truncateGraderProse,
 } from "../src/server/prompts/scoring";
 
 /** Every level descriptor the rubric ships, as one flat list. */
@@ -159,6 +162,18 @@ describe("the JSON Schema scoringOutputSchema converts to", () => {
     expect(serialised).not.toContain("oneOf");
     expect(declaredTypes(converted)).not.toContain("null");
   });
+
+  // `rationale` and every comment carry no `.max()`, for the same reason
+  // `score` carries no `.min()`/`.max()` above: `maxLength` is not guaranteed
+  // under the provider's strict JSON Schema mode any more than
+  // `minimum`/`maximum` is, so a model answering under a schema that declared
+  // it could 400 the whole request. The ceiling is enforced by
+  // `truncateGraderProse` on the answer instead — this test is what stops a
+  // `.max()` from being reintroduced here without anyone noticing why it is
+  // wrong.
+  it("carries no maxLength keyword anywhere", () => {
+    expect(JSON.stringify(converted)).not.toContain("maxLength");
+  });
 });
 
 describe("buildScoringRequest", () => {
@@ -194,6 +209,13 @@ describe("buildScoringRequest", () => {
     expect(request.instructions).toContain("Judge only this reply");
   });
 
+  // The schema cannot enforce a character budget either — see "carries no
+  // maxLength keyword anywhere" above — so the model has to be told, which is
+  // what keeps `truncateGraderProse` a safety net rather than the normal path.
+  it("states the character budget truncateGraderProse otherwise enforces silently", () => {
+    expect(request.instructions).toContain(String(MAX_GRADER_PROSE_LENGTH));
+  });
+
   it("labels the scenario, the question and the reply in the prompt", () => {
     expect(request.prompt).toBe(
       [
@@ -221,5 +243,65 @@ describe("buildScoringRequest", () => {
 describe("the rubric version a scored reply is stamped with", () => {
   it("is the one src/core/rubric.ts declares", () => {
     expect(RUBRIC_VERSION).toBe(CORE_RUBRIC_VERSION);
+  });
+});
+
+/** A graded answer with every item and comment set to the same string. */
+function scoringOutput(
+  rationale: string,
+  comment: string,
+  modelReply = "Reply.",
+): {
+  items: Record<ItemId, { rationale: string; score: Score }>;
+  comments: Record<CriterionId, string>;
+  modelReply: string;
+} {
+  return {
+    items: Object.fromEntries(
+      ITEM_IDS.map((id) => [id, { rationale, score: 4 as const }]),
+    ) as Record<ItemId, { rationale: string; score: Score }>,
+    comments: Object.fromEntries(
+      CRITERIA.map((criterion) => [criterion.id, comment]),
+    ) as Record<CriterionId, string>,
+    modelReply,
+  };
+}
+
+describe("truncateGraderProse", () => {
+  it("leaves an answer already within the budget unchanged", () => {
+    const output = scoringOutput("Short and concrete.", "Change this.");
+
+    expect(truncateGraderProse(output)).toStrictEqual(output);
+  });
+
+  it("cuts every rationale and every comment to MAX_GRADER_PROSE_LENGTH", () => {
+    const overLong = "a".repeat(MAX_GRADER_PROSE_LENGTH + 50);
+    const output = scoringOutput(overLong, overLong);
+
+    const truncated = truncateGraderProse(output);
+
+    for (const id of ITEM_IDS) {
+      expect(truncated.items[id].rationale).toHaveLength(MAX_GRADER_PROSE_LENGTH);
+      expect(truncated.items[id].rationale).toBe(
+        overLong.slice(0, MAX_GRADER_PROSE_LENGTH),
+      );
+    }
+    for (const criterion of CRITERIA) {
+      expect(truncated.comments[criterion.id]).toHaveLength(MAX_GRADER_PROSE_LENGTH);
+    }
+  });
+
+  it("leaves a value exactly at the budget unchanged", () => {
+    const exact = "a".repeat(MAX_GRADER_PROSE_LENGTH);
+    const output = scoringOutput(exact, exact);
+
+    expect(truncateGraderProse(output)).toStrictEqual(output);
+  });
+
+  it("never touches modelReply, which carries no ceiling", () => {
+    const overLong = "a".repeat(MAX_GRADER_PROSE_LENGTH + 50);
+    const output = scoringOutput("Short.", "Short.", overLong);
+
+    expect(truncateGraderProse(output).modelReply).toBe(overLong);
   });
 });

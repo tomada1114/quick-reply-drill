@@ -30,6 +30,13 @@ const ENDPOINT = "http://localhost/api/score";
 const MAX_ANSWER_LENGTH = 600;
 const MAX_REQUEST_BODY_BYTES = 65_536;
 
+/**
+ * The ceiling the grader's own rationale and comments are truncated to,
+ * written out rather than imported from `src/server/prompts/scoring.ts` —
+ * see the module comment above for why.
+ */
+const MAX_GRADER_PROSE_LENGTH = 300;
+
 /** A profile of this suite's own, so no case depends on the shipped table. */
 const PROFILE: LlmProfile = { model: "a-model-alias", reasoningEffort: "high" };
 
@@ -450,6 +457,42 @@ describe("POST /api/score", () => {
         message: "The language model could not answer this request.",
       },
     });
+  });
+
+  // The grader's own field, not a caller's: a model that ignores the brevity
+  // `GRADING_RULES` asks for is truncated at the point the answer is
+  // produced, rather than refused, so the request still succeeds and the
+  // `DrillRecord` a caller stores from it stays within what `POST
+  // /api/dashboard` will later accept back.
+  it("truncates an over-long rationale and comment instead of refusing the answer", async () => {
+    const response = await handlerOver(
+      createFakeLlmPort({
+        response: {
+          ...GRADED,
+          items: {
+            ...GRADED.items,
+            grammar: {
+              rationale: "a".repeat(MAX_GRADER_PROSE_LENGTH + 50),
+              score: 4,
+            },
+          },
+          comments: {
+            ...GRADED.comments,
+            clarity: "a".repeat(MAX_GRADER_PROSE_LENGTH + 50),
+          },
+        },
+      }),
+    )(postRequest(JSON.stringify(INPUT)));
+
+    expect(response.status).toBe(200);
+    const answer = scoreResponseSchema.parse(await response.json());
+
+    expect(answer.items.grammar.rationale).toHaveLength(MAX_GRADER_PROSE_LENGTH);
+    expect(answer.comments.clarity).toHaveLength(MAX_GRADER_PROSE_LENGTH);
+    // Every other field is passed through unchanged, not merely the two cut —
+    // both are `GRADED`'s own values, shared by every item and every comment.
+    expect(answer.items.chatForm.rationale).toBe("Concrete reason.");
+    expect(answer.comments.accuracy).toBe("Change this.");
   });
 
   it.each([

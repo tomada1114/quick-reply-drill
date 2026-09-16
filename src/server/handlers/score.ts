@@ -8,7 +8,11 @@ import {
 } from "../../core/wire";
 import { failure, llmFailure, rejectCrossOrigin } from "../http";
 import type { LlmProfile } from "../llm-profiles";
-import { buildScoringRequest, RUBRIC_VERSION } from "../prompts/scoring";
+import {
+  buildScoringRequest,
+  RUBRIC_VERSION,
+  truncateGraderProse,
+} from "../prompts/scoring";
 import { readJsonBody } from "../request-body";
 
 /**
@@ -96,7 +100,10 @@ export function createScoreHandler(
       // that an alias, because it is what a stored record identifies a grader
       // by rather than something a client may ask for.
       model: { alias: model.model, reasoningEffort: model.reasoningEffort },
-      ...result.value,
+      // Bounds the grader's own prose to what a stored record must stay
+      // within, so a model that ignores the budget `GRADING_RULES` states
+      // still answers with a `DrillRecord` `POST /api/dashboard` will accept.
+      ...truncateGraderProse(result.value),
     };
     return Response.json(answer, { status: 200 });
   };

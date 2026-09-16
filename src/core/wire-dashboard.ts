@@ -15,9 +15,11 @@ import { CRITERIA, ITEM_IDS, SCORE_LEVELS, type CriterionId } from "./rubric";
  *
  * `comments` below is deliberately its own bounded schema rather than a reuse
  * of `wire.ts`'s `scoreCommentsSchema`: that schema types the grader's own
- * output, which this application never bounds by length, while a dashboard
- * record's `comments` arrives from a caller like every other field here and
- * has to be bounded the same way they are.
+ * output, which this application never bounds by length in the schema — a
+ * ceiling there would land as `maxLength` in the JSON Schema the grader's
+ * structured-output request is converted to, which strict mode does not
+ * guarantee — while a dashboard record's `comments` arrives from a caller
+ * like every other field here and has to be bounded the same way they are.
  */
 
 /** The most records one `POST /api/dashboard` call may summarise. */
