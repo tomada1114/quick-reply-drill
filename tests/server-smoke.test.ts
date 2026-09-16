@@ -29,23 +29,6 @@ const prerenderManifestPath = path.join(repoRoot, ".next", "prerender-manifest.j
 /** The `next` CLI, run through this process's own Node rather than a shell. */
 const nextCli = createRequire(import.meta.url).resolve("next/dist/bin/next");
 
-/**
- * The credential the spawned server is given, and the only one it accepts.
- *
- * @remarks
- * Set on the child's environment rather than read from the ambient one, which
- * decides whether `POST /api/ask` answers 401 or 200: a developer who exports
- * `API_ACCESS_KEY`, or a `.env` Next.js loads at start-up, would otherwise
- * flip this suite's expectation without touching a line of it. Next.js does
- * not overwrite a variable already present in the environment it is spawned
- * with, so this value wins over either.
- *
- * It is a throwaway string, not a secret: what stands behind the port is the
- * fake adapter `src/server/composition.ts` wires, so an answer here reaches no
- * provider and costs nobody anything.
- */
-const ACCESS_KEY = "smoke-test-throwaway-access-key";
-
 /** How long `next start` gets to accept its first connection. */
 const READY_TIMEOUT_MS = 60_000;
 
@@ -332,7 +315,7 @@ beforeAll(async () => {
       // production build would otherwise be served under `test` and every
       // `process.env.NODE_ENV === "production"` branch would take a path no
       // deployment takes.
-      env: { ...process.env, NODE_ENV: "production", API_ACCESS_KEY: ACCESS_KEY },
+      env: { ...process.env, NODE_ENV: "production" },
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,
     },
@@ -408,25 +391,25 @@ describe("the built application, served by `next start`", () => {
     expect(document).toContain("Page not found");
   });
 
-  it("refuses POST /api/ask without the access key", async () => {
+  it("refuses POST /api/ask without Sec-Fetch-Site", async () => {
     const response = await fetch(`${baseUrl}/api/ask`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ prompt: "Hello" }),
     });
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(403);
     await expect(response.json()).resolves.toMatchObject({
-      error: { code: "ERR_UNAUTHORIZED" },
+      error: { code: "ERR_FORBIDDEN_ORIGIN" },
     });
   });
 
-  it("answers POST /api/ask with the access key", async () => {
+  it("answers POST /api/ask with Sec-Fetch-Site: same-origin", async () => {
     const response = await fetch(`${baseUrl}/api/ask`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${ACCESS_KEY}`,
+        "sec-fetch-site": "same-origin",
       },
       body: JSON.stringify({ prompt: "Hello" }),
     });

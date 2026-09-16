@@ -34,6 +34,29 @@ export function failure(
 }
 
 /**
+ * Rejects a request that does not identify itself as same-origin.
+ *
+ * @remarks
+ * `Sec-Fetch-Site` is browser-supplied Fetch Metadata: an absent header and
+ * every value other than `same-origin` are refused with a fixed `403` response.
+ * This is a CSRF-grade guard, not authentication — a caller that can reach the
+ * process can set the header by hand — so the loopback bind keeps strangers off
+ * the local server and a deployed app needs access control in front of it.
+ *
+ * @returns `undefined` for a case-insensitive `same-origin` value, or the
+ * fixed failure response to return before the request body is read.
+ */
+export function rejectCrossOrigin(request: Request): Response | undefined {
+  return request.headers.get("sec-fetch-site")?.toLowerCase() === "same-origin"
+    ? undefined
+    : failure(
+        403,
+        "ERR_FORBIDDEN_ORIGIN",
+        "This endpoint answers same-origin browser requests only.",
+      );
+}
+
+/**
  * Reads `request`'s body as JSON, refusing one that is too large to buffer.
  *
  * @remarks

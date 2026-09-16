@@ -28,7 +28,7 @@ pnpm install
 pnpm dev
 ```
 
-Then open <http://localhost:3000>. The page it renders is `src/app/page.tsx`.
+Then open <http://127.0.0.1:3000>. The page it renders is `src/app/page.tsx`.
 
 There is one API route, `POST /api/ask`, which takes `{ "prompt": "..." }` and answers
 `{ "answer": "..." }`. It asks the model to write in English, which is the one language
@@ -37,13 +37,11 @@ needs no credentials; `src/server/composition.ts` is the single place that decid
 adapter is behind it. Copy `.env.example` to `.env` when you swap in one that needs a
 key.
 
-Swapping one in also closes the endpoint. `src/server/composition.ts` declares that the
-adapter it wires bills a provider, and `readServerEnv` then requires `API_ACCESS_KEY` —
-a deployment that pays for its answers refuses to start rather than serving anyone who
-finds the URL — after which the route answers `401` unless the request carries that key
-as `Authorization: Bearer <value>`. Exporting a provider credential does not on its own
-close anything: while the fake adapter answers, nothing is billed and nothing is
-required. That is authentication and nothing more: this template ships no rate limit.
+The endpoint accepts only browser requests whose `Sec-Fetch-Site` is `same-origin`; a
+missing or cross-site header gets `403 ERR_FORBIDDEN_ORIGIN` before the body is read.
+The `dev` and `start` commands bind to `127.0.0.1`, so another machine cannot reach the
+local server. The header is a CSRF-grade guard rather than authentication; when this is
+deployed, put access control in front of the app or use a one-time passphrase cookie.
 
 What the route does bound is the size of a request. The `prompt` is trimmed and must be
 1 to 8000 characters, and the body is refused with `413` once it crosses 64 KiB while it

@@ -3,21 +3,15 @@ import "server-only";
 import * as z from "zod";
 
 /**
- * A variable that may be absent, where a blank value means the same as absent.
+ * A setting that may be absent, where a blank value means the same as absent.
  *
  * @remarks
  * `.env.example` ships every name with an empty value, so copying it to `.env`
  * — the first thing anyone does with this template — leaves `KEY=` in the
  * environment. Node reports that as `""`, not as a missing key, and treating
  * the two differently would make a copied example file a configuration error.
- *
- * The value is trimmed rather than kept as written, because every name here is
- * a credential and surrounding whitespace is never part of one. A secret pasted
- * out of a manager with a trailing newline would otherwise be a key no caller
- * can present in a matching form: `src/server/handlers/ask.ts` compares against
- * a bearer token that cannot carry leading or trailing whitespace, so an
- * untrimmed `API_ACCESS_KEY` would answer 401 to every request, including one
- * sending the exact configured value.
+ * The value is trimmed because surrounding whitespace is never part of a
+ * setting copied from a credential manager.
  */
 const optionalSetting = z
   .string()
@@ -50,69 +44,14 @@ const serverEnvShape = z.object({
    * `ERR_LLM_AUTH` on the request that needed it — a failure a caller can see
    * and act on, which a server that refuses to boot is not.
    *
-   * Its mere presence obliges nothing. What obliges
-   * {@link serverEnvShape.API_ACCESS_KEY} is which adapter is wired, not which
-   * variables happen to be set; see {@link ServerEnvRequirements}.
+   * Its presence is validated here but its use belongs to the adapter that
+   * receives the environment from the composition root.
    */
   OPENAI_API_KEY: optionalSetting,
-
-  /**
-   * The shared secret a caller of `POST /api/ask` must present.
-   *
-   * @remarks
-   * Optional on its own — the zero-credential quick start answers from the
-   * fake adapter and has nothing to protect — but required as soon as
-   * `src/server/composition.ts` wires an adapter that bills a provider, which
-   * it says by passing {@link ServerEnvRequirements.requiresAccessKey}.
-   *
-   * `src/server/composition.ts` hands the value to the handler, which
-   * compares it against the caller's `Authorization: Bearer` credential.
-   * `API_ACCESS_KEY` is authentication only. This template deliberately ships
-   * neither a rate limit nor a concurrency limit; deployments using a billed
-   * adapter must apply their deployment-wide caller-throughput policy at an edge
-   * or gateway before `POST /api/ask` reaches the app. See
-   * `building-app-routes` for that guidance.
-   */
-  API_ACCESS_KEY: optionalSetting,
 });
 
 /** The validated environment, as the rest of `src/server/` sees it. */
 export type ServerEnv = z.infer<typeof serverEnvShape>;
-
-/** What the composition root has to tell {@link readServerEnv} about itself. */
-export interface ServerEnvRequirements {
-  /**
-   * Whether the adapter the composition root wires bills a provider per answer.
-   *
-   * @remarks
-   * `POST /api/ask` reaches the model call with nothing in front of it: no
-   * proxy or middleware at all, and no check in the handler beyond body
-   * validation. So an endpoint that costs money to
-   * answer must not also be open, and `true` here is what makes that
-   * impossible to forget — `readServerEnv` throws, and the server stops as it
-   * starts rather than serving one request unprotected.
-   *
-   * It is the adapter that decides this, never the environment. Keying the
-   * rule off whether a provider credential is *present* would refuse to start
-   * on any machine that exports one for an unrelated reason, while the fake
-   * adapter — which bills nothing — is what actually answers.
-   */
-  readonly requiresAccessKey: boolean;
-}
-
-/** The shape, plus the one rule that spans two of its fields. */
-const billedServerEnvSchema = serverEnvShape.superRefine((env, ctx) => {
-  if (env.API_ACCESS_KEY !== undefined) {
-    return;
-  }
-  ctx.addIssue({
-    code: "custom",
-    path: ["API_ACCESS_KEY"],
-    // Names, never values: this message reaches a log and a crash report.
-    message:
-      "API_ACCESS_KEY is required because src/server/composition.ts wires an adapter that bills a provider for every answer. POST /api/ask reaches that model call with no authentication of its own, so it must not be left open.",
-  });
-});
 
 /** Every name {@link serverEnvShape} declares, for the `.env.example` check. */
 export const SERVER_ENV_NAMES: readonly string[] = Object.keys(serverEnvShape.shape);
@@ -130,15 +69,9 @@ export const SERVER_ENV_NAMES: readonly string[] = Object.keys(serverEnvShape.sh
  * deployment mistake with no caller-side recovery, so failing where it is read
  * is more useful than threading an error through code that cannot act on it.
  *
- * @param requirements - What the composition root's own wiring demands of the
- * environment; see {@link ServerEnvRequirements}.
  * @returns The validated environment.
- * @throws A `ZodError` naming every variable that did not match its shape, or
- * the missing `API_ACCESS_KEY` a billed adapter obliges.
+ * @throws A `ZodError` naming every variable that did not match its shape.
  */
-export function readServerEnv(requirements: ServerEnvRequirements): ServerEnv {
-  const schema = requirements.requiresAccessKey
-    ? billedServerEnvSchema
-    : serverEnvShape;
-  return schema.parse(process.env);
+export function readServerEnv(): ServerEnv {
+  return serverEnvShape.parse(process.env);
 }
