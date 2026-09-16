@@ -71,8 +71,8 @@ Then run `pnpm build` and open the page.
 
 ## A Route Handler is one re-export line
 
-`src/app/api/ask/route.ts` is a single line re-exporting `askHandler` as `POST`. Copy
-that shape for a new endpoint rather than inventing another:
+`src/app/api/score/route.ts` is a single line re-exporting `scoreHandler` as `POST`.
+Copy that shape for a new endpoint rather than inventing another:
 
 1. Write the logic in `src/server/handlers/<name>.ts` as a
    `create<Name>Handler(dependencies)` factory returning
@@ -82,7 +82,7 @@ that shape for a new endpoint rather than inventing another:
 3. Re-export it from `src/app/api/<name>/route.ts` under the HTTP verb's name.
 
 Two things make this worth the extra file. The handler is Web-standard, so a test drives
-it with a plain `new Request(...)` and no framework, as `tests/server-handler.test.ts`
+it with a plain `new Request(...)` and no framework, as `tests/server-score.test.ts`
 does. And `src/app/**` carries no coverage floor at all — `vitest.config.ts` thresholds
 `src/{core,ai,server}/**` and deliberately leaves the App Router tree out — so logic
 parked in a route file is logic no floor measures.
@@ -96,8 +96,9 @@ still arrives at the handler as a plain argument.
 
 The response contract is the status, the `error.code` vocabulary, and nothing from a
 provider's own error text — a provider message can carry request content back to the
-caller. `src/server/handlers/ask.ts` maps codes to statuses through a `satisfies` table
-so an added code fails to compile rather than falling through to a default.
+caller. `src/server/http.ts` maps codes to statuses through a `satisfies` table so an
+added code fails to compile rather than falling through to a default, and every handler
+answers a port failure through its `llmFailure` rather than deciding a status itself.
 **BACKGROUND:** `designing-errors` for the code vocabulary itself.
 
 ### Who may call it, and how often
@@ -117,19 +118,25 @@ and keep the handler guard unchanged. This template also ships no rate limit or
 concurrency limit; a deployment must enforce shared caller-throughput policy at its edge
 or gateway rather than in one process.
 
-**What the endpoint does bound is the size of one request.** `src/server/http.ts` reads
-a JSON body through a wrapper that abandons it once it crosses `MAX_REQUEST_BODY_BYTES`,
-rather than trusting `Content-Length` — a header that is absent under chunked transfer
-encoding and is otherwise whatever the client says it is, so only what is actually read
-bounds anything. The request schema bounds the `prompt` at both ends after trimming it,
-which is what bounds the input tokens billed for a call. Read a new endpoint's body
-through the same helper instead of calling `request.json()`, and keep both refusals
-ahead of the port: a request rejected after the model has answered has already been paid
-for.
+**What the endpoint does bound is the size of one request.**
+`src/server/request-body.ts` reads a JSON body through a wrapper that abandons it once
+it crosses `MAX_REQUEST_BODY_BYTES`, rather than trusting `Content-Length` — a header
+that is absent under chunked transfer encoding and is otherwise whatever the client says
+it is, so only what is actually read bounds anything. On top of that, the request schema
+in `src/core/wire.ts` bounds every field after trimming it, which is what bounds the
+input tokens billed for a call. Read a new endpoint's body through the same helper
+instead of calling `request.json()`, and keep both refusals ahead of the port: a request
+rejected after the model has answered has already been paid for.
 
-The endpoint is a worked example of a handler behind the composition root. Replacing the
-provider changes the adapter and composition wiring while this handler pattern stays the
-same; the body limits and port call above remain the shared rules for later routes.
+A request schema belongs in `src/core/wire.ts` rather than beside the handler, because
+the browser code that calls the endpoint needs the same shape and cannot import
+`src/server/`. Anything the model must not be told is simply not on the wire — the
+scoring endpoint is sent no timing, so the grader cannot be swayed by it.
+
+`POST /api/score` is the worked example of a handler behind the composition root.
+Replacing the provider changes the adapter and composition wiring while this handler
+pattern stays the same; the body limits and port call above remain the shared rules for
+later routes.
 
 ## Configuration
 

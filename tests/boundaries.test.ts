@@ -96,7 +96,7 @@ function importsAdapter(module: string, specifier: string): boolean {
 }
 
 interface Module {
-  /** Repo-relative POSIX path, e.g. `src/server/handlers/ask.ts`. */
+  /** Repo-relative POSIX path, e.g. `src/server/handlers/score.ts`. */
   readonly file: string;
   readonly specifiers: readonly string[];
 }
@@ -151,7 +151,7 @@ const SCAN_ANCHORS = [
   "src/ai/adapters/fake/index.ts",
   "src/app/page.tsx",
   "src/core/result.ts",
-  "src/server/handlers/ask.ts",
+  "src/server/handlers/score.ts",
 ];
 
 describe("the import scanner the zone assertions run on", () => {
@@ -173,8 +173,18 @@ describe("the import scanner the zone assertions run on", () => {
       "src/ai/adapters/fake/index.ts",
       ["zod", "../../../core/result", "../../errors", "../../port"],
     ],
-    ["src/server/handlers/ask.ts", ["zod", "../../ai/index", "../http"]],
-    ["src/app/api/ask/route.ts", ["../../../server/composition"]],
+    [
+      "src/server/handlers/score.ts",
+      [
+        "../../ai/index",
+        "../../core/wire",
+        "../http",
+        "../llm-profiles",
+        "../prompts/scoring",
+        "../request-body",
+      ],
+    ],
+    ["src/app/api/score/route.ts", ["../../../server/composition"]],
     ["src/app/api/questions/route.ts", ["../../../server/composition"]],
   ])("reads %s as %p", (file, expected) => {
     const module = sourceModules.find((candidate) => candidate.file === file);
@@ -198,7 +208,7 @@ describe("the import scanner the zone assertions run on", () => {
   });
 
   it("resolves a relative specifier to the module it names", () => {
-    expect(resolveWithin("src/server/handlers/ask.ts", "../../ai/index")).toBe(
+    expect(resolveWithin("src/server/handlers/score.ts", "../../ai/index")).toBe(
       "src/ai/index",
     );
     expect(resolveWithin("src/ai/port.ts", "./adapters/fake/index")).toBe(
@@ -422,7 +432,7 @@ describe("src/app/ and src/server/ reach the AI layer only through src/ai/index.
   // surface" is vacuously true of an empty set. This asserts the real tree
   // actually exercises the surface, without pinning which file does: a
   // minimum count survives a legal refactor that moves the call between
-  // src/server/composition.ts and src/server/handlers/ask.ts, where an
+  // src/server/composition.ts and src/server/handlers/score.ts, where an
   // exhaustive file list would not.
   it("has at least one real src/app or src/server module reaching the AI surface", () => {
     const surfaceImporters = modulesIn("src/app", "src/server").filter((module) =>

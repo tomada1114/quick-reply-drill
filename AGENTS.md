@@ -21,9 +21,10 @@ checked.
 ## Overview
 
 A Next.js application on the App Router, written in ESM-only TypeScript: a page tree,
-one JSON endpoint, and one language-model call behind a port that an adapter implements.
-It answers with a fake adapter out of the box, so `pnpm dev` works before any credential
-exists, and the AI layer keeps provider-specific code behind that port.
+two JSON endpoints, and every language-model call behind a port that an adapter
+implements. A missing credential stops nothing from starting — `pnpm dev` runs and the
+pages render, and an endpoint that needs the model answers `ERR_LLM_AUTH` per request —
+and the AI layer keeps provider-specific code behind that port.
 
 It grew out of a template, and the template's locale-prefixed page tree, its `next-intl`
 message catalogs and its Anthropic adapter have been removed: this application ships one
@@ -130,11 +131,11 @@ three seams:
   port, its error vocabulary, and whichever adapter that file chooses to publish.
   `src/ai/adapters/` is private to the layer, so swapping the fake for a provider is a
   bounded edit and vendor-specific code does not leak into callers.
-- **The Web-standard handler.** `src/server/handlers/ask.ts` exports
-  `createAskHandler(dependencies)`, which returns a plain
+- **The Web-standard handler.** `src/server/handlers/score.ts` exports
+  `createScoreHandler(dependencies)`, which returns a plain
   `(request: Request) => Promise<Response>` and imports nothing from `next`. That is
   what lets a test drive it with `new Request(…)` and no framework, and what keeps
-  `src/app/api/ask/route.ts` a one-line re-export with no logic of its own to test.
+  `src/app/api/score/route.ts` a one-line re-export with no logic of its own to test.
 - **The environment.** `src/server/env.ts` is the only module under `src/` that reads
   `process.env`. It validates the whole environment against one schema and hands every
   other module what it needs as an argument, so "where does this secret enter the
@@ -146,25 +147,26 @@ vendor. That choice made anywhere else is the leak these boundaries exist to pre
 
 ### Rate limiting
 
-This template deliberately implements neither rate limiting nor concurrency limiting for
-`POST /api/ask`. It owns no limiter state, store, algorithm, or rate-limit environment
-variable. The endpoint does reject a request without the browser's
+This application deliberately implements neither rate limiting nor concurrency limiting
+for its endpoints. It owns no limiter state, store, algorithm, or rate-limit environment
+variable. Each endpoint does reject a request without the browser's
 `Sec-Fetch-Site: same-origin` header, and `dev`/`start` bind to `127.0.0.1`; that is a
 CSRF-grade guard plus a local network boundary, not authentication. A deployed app must
 put access control and shared caller-throughput enforcement at an edge or gateway before
 the request reaches the app; a per-process limiter is not equivalent across instances.
 
-The app still owns its existing per-request request-body and prompt ceilings and rejects
-those before `llm.generate`.
+The app still owns its per-request request-body ceiling and the per-field ceilings each
+wire schema declares, and rejects those before `llm.generate`.
 
 ### What is contract and what is private
 
 Nothing here is published, so the contract is not an export map. It is what a caller
 outside the process can observe, plus what each zone publishes to the zone above it:
 
-- **Contract.** The HTTP surface of `POST /api/ask` — its request body, its answer, and
-  the `error.code` vocabulary a client branches on. The `LlmPort` interface, `LlmError`
-  and its `ERR_LLM_*` codes, and everything else `src/ai/index.ts` names.
+- **Contract.** The HTTP surface of `POST /api/questions` and `POST /api/score` — their
+  request bodies, their answers, and the `error.code` vocabulary a client branches on.
+  The `LlmPort` interface, `LlmError` and its `ERR_LLM_*` codes, and everything else
+  `src/ai/index.ts` names.
 - **Private.** `src/ai/adapters/**`; the wiring inside `src/server/composition.ts`; and
   any module a zone's own surface does not re-export. A test reaches a private module
   through the surface that owns it, never around it.

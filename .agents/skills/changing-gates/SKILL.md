@@ -331,9 +331,10 @@ the last `pnpm build` with `next start` under `NODE_ENV=production` and asserts 
 `fetch` that `/` is prerendered and serves 200 with the right `<html lang>`, `<title>`
 and description meta; that an unknown path 404s directly — no redirect, and exactly one
 `<html>`/`<body>` shell, which is what catches a boundary rendering its own document
-shell inside the root layout's; and that `POST /api/ask` answers its documented
-statuses. That is the whole of what a running server is checked for — the seams between
-the layers, not their behaviour, which each layer's own suite owns.
+shell inside the root layout's; and that `POST /api/questions` and `POST /api/score`
+answer their documented statuses. That is the whole of what a running server is checked
+for — the seams between the layers, not their behaviour, which each layer's own suite
+owns.
 
 It runs from `check:source` and from ci.yml's `static` job, both times immediately after
 `Build`, and from neither `pnpm test` nor `pnpm check:quick`: the build is what it

@@ -56,6 +56,13 @@ const SHUTDOWN_GRACE_MS = 5_000;
  */
 const BUILD_INPUTS = ["src", "next.config.ts", "postcss.config.mjs"];
 
+/** One schema-valid body for `POST /api/score`, refused for the key, not the shape. */
+const SCORE_REQUEST = {
+  question: "Are you free for lunch tomorrow?",
+  scenarioLine: "A coworker, in a direct message",
+  answer: "Sure, tomorrow works. Where do you want to go?",
+};
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -427,43 +434,6 @@ describe("the built application, served by `next start`", () => {
     expect(document).toContain("Page not found");
   });
 
-  it("refuses POST /api/ask without Sec-Fetch-Site", async () => {
-    const response = await fetch(`${baseUrl}/api/ask`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prompt: "Hello" }),
-    });
-
-    expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({
-      error: { code: "ERR_FORBIDDEN_ORIGIN" },
-    });
-  });
-
-  it("answers POST /api/ask with Sec-Fetch-Site: same-origin", async () => {
-    const response = await fetch(`${baseUrl}/api/ask`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "sec-fetch-site": "same-origin",
-      },
-      body: JSON.stringify({ prompt: "Hello" }),
-    });
-
-    expect(response.status).toBe(200);
-    const body: unknown = await response.json();
-    if (typeof body !== "object" || body === null || !("answer" in body)) {
-      throw new TypeError(
-        `POST /api/ask must answer with an \`answer\` field; it answered ${JSON.stringify(body)}`,
-      );
-    }
-    // The shape, never the wording: which adapter answers is
-    // `src/server/composition.ts`'s to change without editing this suite.
-    expect(Object.keys(body)).toStrictEqual(["answer"]);
-    expect(typeof body.answer).toBe("string");
-    expect(body.answer).not.toBe("");
-  });
-
   it("refuses POST /api/questions without Sec-Fetch-Site", async () => {
     const response = await fetch(`${baseUrl}/api/questions`, {
       method: "POST",
@@ -505,6 +475,55 @@ describe("the built application, served by `next start`", () => {
         "sec-fetch-site": "same-origin",
       },
       body: JSON.stringify({ count: 2 }),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_LLM_AUTH" },
+    });
+  });
+
+  it("refuses POST /api/score without Sec-Fetch-Site", async () => {
+    const response = await fetch(`${baseUrl}/api/score`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(SCORE_REQUEST),
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_FORBIDDEN_ORIGIN" },
+    });
+  });
+
+  it("refuses POST /api/score with a body the schema does not accept", async () => {
+    const response = await fetch(`${baseUrl}/api/score`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "sec-fetch-site": "same-origin",
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "ERR_BAD_REQUEST" },
+    });
+  });
+
+  // The case that proves the endpoint is composed at all, and that the guards
+  // above it run in the stated order — for the price of nothing, because the
+  // key the server was spawned with is blank. A 200 here would mean this suite
+  // had just paid a provider to grade a reply.
+  it("answers POST /api/score with ERR_LLM_AUTH when no key is configured", async () => {
+    const response = await fetch(`${baseUrl}/api/score`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "sec-fetch-site": "same-origin",
+      },
+      body: JSON.stringify(SCORE_REQUEST),
     });
 
     expect(response.status).toBe(500);

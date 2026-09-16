@@ -23,10 +23,12 @@ the `.mjs` files under `scripts/` (`writing-repo-scripts`).
 
 - An error `code` string is not a naming decision made here — **REQUIRED:**
   `designing-errors` owns the `ERR_*` vocabulary for both `src/` and `scripts/`.
-- Keep a constant next to the code that reads it. `OUTPUT_LANGUAGE` and
-  `STATUS_BY_LLM_CODE` both sit in `src/server/handlers/ask.ts` because that handler is
-  the only module that reads either. Do not create a shared `constants.ts` grab-bag that
-  forces unrelated modules to import each other.
+- Keep a constant next to the code that reads it. `STATUS_BY_LLM_CODE` sits in
+  `src/server/http.ts` and `PROMPT_OUTPUT_LANGUAGE` in `src/server/prompts/request.ts`,
+  because those are the modules that read them. Do not create a shared `constants.ts`
+  grab-bag that forces unrelated modules to import each other. A constant two zones both
+  need is a different case: a bound both a handler and its client have to agree on lives
+  with the schema that states it, in `src/core/wire.ts`.
 
 ## Boundary types: unknown, any, and assertions
 
