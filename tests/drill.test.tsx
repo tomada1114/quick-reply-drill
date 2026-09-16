@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Drill } from "../src/components/drill/drill";
@@ -146,6 +146,57 @@ function typeReply(text: string): void {
   fireEvent.change(screen.getByLabelText("Your reply"), { target: { value: text } });
 }
 
+function setNavigatorPlatform(platform: string): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(window.navigator, "platform");
+  Object.defineProperty(window.navigator, "platform", {
+    configurable: true,
+    value: platform,
+  });
+
+  return () => {
+    if (descriptor) {
+      Object.defineProperty(window.navigator, "platform", descriptor);
+    } else {
+      delete (window.navigator as { platform?: string }).platform;
+    }
+  };
+}
+
+function setNavigatorTouchPoints(maxTouchPoints: number): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    window.navigator,
+    "maxTouchPoints",
+  );
+  Object.defineProperty(window.navigator, "maxTouchPoints", {
+    configurable: true,
+    value: maxTouchPoints,
+  });
+
+  return () => {
+    if (descriptor) {
+      Object.defineProperty(window.navigator, "maxTouchPoints", descriptor);
+    } else {
+      delete (window.navigator as { maxTouchPoints?: number }).maxTouchPoints;
+    }
+  };
+}
+
+function setNavigatorUserAgent(userAgent: string): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(window.navigator, "userAgent");
+  Object.defineProperty(window.navigator, "userAgent", {
+    configurable: true,
+    value: userAgent,
+  });
+
+  return () => {
+    if (descriptor) {
+      Object.defineProperty(window.navigator, "userAgent", descriptor);
+    } else {
+      delete (window.navigator as { userAgent?: string }).userAgent;
+    }
+  };
+}
+
 describe("Drill", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -199,6 +250,174 @@ describe("Drill", () => {
       screen.queryByRole("status", { name: "Scoring your reply" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("STOPPED", { exact: true })).not.toBeInTheDocument();
+  });
+
+  it("sends a non-empty reply with Ctrl+Enter and shows the shortcut hint", async () => {
+    const { scoreMock } = stubFetch();
+    let resolveScore: ((response: Response) => void) | undefined;
+    scoreMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveScore = resolve;
+      }),
+    );
+    await renderDrill(new MapStorage());
+
+    clickStart();
+    typeReply("Sure, I'm free then.");
+    expect(
+      screen.getByText("Reply in one or two sentences. Ctrl+Enter to send"),
+    ).toBeInTheDocument();
+
+    const textarea = screen.getByLabelText("Your reply");
+    expect(textarea).toHaveAttribute("aria-describedby", "answering-shortcut-hint");
+    expect(textarea).toHaveAttribute("aria-keyshortcuts", "Control+Enter");
+    expect(
+      screen.getByText("Reply in one or two sentences. Ctrl+Enter to send"),
+    ).toHaveAttribute("id", "answering-shortcut-hint");
+    fireEvent.keyDown(textarea, { code: "Enter", ctrlKey: true, key: "Enter" });
+    expect(scoreMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(textarea, { code: "Enter", ctrlKey: true, key: "Enter" });
+    expect(scoreMock).toHaveBeenCalledTimes(1);
+
+    resolveScore?.(jsonResponse(200, makeScoreResponse()));
+    await flush();
+  });
+
+  it("ignores the shortcut for an empty or whitespace reply and preserves plain Enter", async () => {
+    const { scoreMock } = stubFetch();
+    await renderDrill(new MapStorage());
+
+    clickStart();
+    const textarea = screen.getByLabelText("Your reply");
+    fireEvent.keyDown(textarea, { code: "Enter", ctrlKey: true, key: "Enter" });
+    typeReply("   ");
+    fireEvent.keyDown(textarea, { code: "Enter", ctrlKey: true, key: "Enter" });
+    typeReply("A reply with a newline still belongs in the field.");
+    const plainEnter = createEvent.keyDown(textarea, { code: "Enter", key: "Enter" });
+    fireEvent(textarea, plainEnter);
+
+    expect(scoreMock).not.toHaveBeenCalled();
+    expect(plainEnter.defaultPrevented).toBe(false);
+    expect(textarea).toHaveValue("A reply with a newline still belongs in the field.");
+  });
+
+  it("uses the Meta+Enter shortcut on Mac platforms", async () => {
+    const restorePlatform = setNavigatorPlatform("MacIntel");
+    try {
+      const { scoreMock } = stubFetch();
+      scoreMock.mockReturnValueOnce(jsonResponse(200, makeScoreResponse()));
+      await renderDrill(new MapStorage());
+
+      clickStart();
+      typeReply("Sure, I'm free then.");
+      expect(
+        screen.getByText("Reply in one or two sentences. ⌘↵ to send"),
+      ).toBeInTheDocument();
+
+      const textarea = screen.getByLabelText("Your reply");
+      expect(textarea).toHaveAttribute("aria-keyshortcuts", "Meta+Enter");
+      fireEvent.keyDown(textarea, { code: "Enter", ctrlKey: true, key: "Enter" });
+      expect(scoreMock).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(textarea, { code: "Enter", key: "Enter", metaKey: true });
+      await flush();
+      expect(scoreMock).toHaveBeenCalledTimes(1);
+    } finally {
+      restorePlatform();
+    }
+  });
+
+  it("keeps the Ctrl shortcut on non-Mac Apple platforms", async () => {
+    const restorePlatform = setNavigatorPlatform("iPhone");
+    try {
+      const { scoreMock } = stubFetch();
+      scoreMock.mockReturnValueOnce(jsonResponse(200, makeScoreResponse()));
+      await renderDrill(new MapStorage());
+
+      clickStart();
+      typeReply("Sure, I'm free then.");
+      expect(
+        screen.getByText("Reply in one or two sentences. Ctrl+Enter to send"),
+      ).toBeInTheDocument();
+
+      const textarea = screen.getByLabelText("Your reply");
+      fireEvent.keyDown(textarea, { code: "Enter", key: "Enter", metaKey: true });
+      expect(scoreMock).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(textarea, { code: "Enter", ctrlKey: true, key: "Enter" });
+      await flush();
+      expect(scoreMock).toHaveBeenCalledTimes(1);
+    } finally {
+      restorePlatform();
+    }
+  });
+
+  it("keeps the Ctrl shortcut in iPad desktop mode", async () => {
+    const restorePlatform = setNavigatorPlatform("MacIntel");
+    const restoreTouchPoints = setNavigatorTouchPoints(5);
+    try {
+      const { scoreMock } = stubFetch();
+      scoreMock.mockReturnValueOnce(jsonResponse(200, makeScoreResponse()));
+      await renderDrill(new MapStorage());
+
+      clickStart();
+      typeReply("Sure, I'm free then.");
+      expect(
+        screen.getByText("Reply in one or two sentences. Ctrl+Enter to send"),
+      ).toBeInTheDocument();
+    } finally {
+      restoreTouchPoints();
+      restorePlatform();
+    }
+  });
+
+  it("keeps the Ctrl shortcut on a one-touch Mac-reported device", async () => {
+    const restorePlatform = setNavigatorPlatform("MacIntel");
+    const restoreTouchPoints = setNavigatorTouchPoints(1);
+    try {
+      const { scoreMock } = stubFetch();
+      scoreMock.mockReturnValueOnce(jsonResponse(200, makeScoreResponse()));
+      await renderDrill(new MapStorage());
+
+      clickStart();
+      typeReply("Sure, I'm free then.");
+      expect(
+        screen.getByText("Reply in one or two sentences. Ctrl+Enter to send"),
+      ).toBeInTheDocument();
+
+      const textarea = screen.getByLabelText("Your reply");
+      fireEvent.keyDown(textarea, { code: "Enter", key: "Enter", metaKey: true });
+      expect(scoreMock).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(textarea, { code: "Enter", ctrlKey: true, key: "Enter" });
+      await flush();
+      expect(scoreMock).toHaveBeenCalledTimes(1);
+    } finally {
+      restoreTouchPoints();
+      restorePlatform();
+    }
+  });
+
+  it("recognizes a Mac user agent when the platform value is empty", async () => {
+    const restorePlatform = setNavigatorPlatform("");
+    const restoreUserAgent = setNavigatorUserAgent(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)",
+    );
+    try {
+      const { scoreMock } = stubFetch();
+      scoreMock.mockReturnValueOnce(jsonResponse(200, makeScoreResponse()));
+      await renderDrill(new MapStorage());
+
+      clickStart();
+      typeReply("Sure, I'm free then.");
+      expect(
+        screen.getByText("Reply in one or two sentences. ⌘↵ to send"),
+      ).toBeInTheDocument();
+    } finally {
+      restoreUserAgent();
+      restorePlatform();
+    }
   });
 
   it("keeps Start disabled while questions load and enables it when ready", async () => {
@@ -381,6 +600,12 @@ describe("Drill", () => {
     expect(
       screen.getByText("The scorer did not answer (ERR_LLM_TIMEOUT). Try again."),
     ).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByLabelText("Your reply"), {
+      code: "Enter",
+      ctrlKey: true,
+      key: "Enter",
+    });
+    expect(scoreMock).toHaveBeenCalledTimes(1);
     expect(
       screen.queryByRole("status", { name: "Scoring your reply" }),
     ).not.toBeInTheDocument();

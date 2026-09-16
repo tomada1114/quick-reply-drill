@@ -1,4 +1,9 @@
-import type { ChangeEvent, ReactElement } from "react";
+import {
+  useSyncExternalStore,
+  type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactElement,
+} from "react";
 
 import { cn } from "@/components/lib/utils";
 import { DrillCard, DrillDivider } from "@/components/shared/card";
@@ -24,6 +29,26 @@ interface AnsweringCardProps {
 }
 
 const URGENT_THRESHOLD_MS = 10_000;
+const ANSWERING_SHORTCUT_HINT_ID = "answering-shortcut-hint";
+
+// The platform does not change during a page session; the empty subscription
+// keeps the snapshot hydration-safe without an effect-triggered render.
+function subscribeToPlatform(): () => void {
+  return () => undefined;
+}
+
+function getIsMacPlatform(): boolean {
+  if (typeof navigator === "undefined") return false;
+  if (navigator.maxTouchPoints > 0) return false;
+  return (
+    navigator.platform.startsWith("Mac") ||
+    /Macintosh|Mac OS X/.test(navigator.userAgent)
+  );
+}
+
+function getServerIsMacPlatform(): boolean {
+  return false;
+}
 
 /**
  * The drill card: countdown and scenario line in the header, the question and
@@ -42,13 +67,21 @@ export function AnsweringCard({
   submitting,
   scoreError,
 }: AnsweringCardProps): ReactElement {
+  const isMac = useSyncExternalStore(
+    subscribeToPlatform,
+    getIsMacPlatform,
+    getServerIsMacPlatform,
+  );
   const hasError = scoreError !== undefined;
   const expired = remainingMs === 0;
   const stopped = submitting || hasError;
   const urgent = !stopped && remainingMs > 0 && remainingMs < URGENT_THRESHOLD_MS;
   const disabled = submitting || hasError;
 
-  const footerHint = hasError ? undefined : "Reply in one or two sentences.";
+  const shortcutKey = isMac ? "Meta+Enter" : "Control+Enter";
+  const footerHint = stopped
+    ? undefined
+    : `Reply in one or two sentences. ${isMac ? "⌘↵" : "Ctrl+Enter"} to send`;
   const buttonLabel = hasError ? "Retry" : "Send";
   const buttonDisabled = hasError ? false : submitting || reply.trim() === "";
 
@@ -59,6 +92,15 @@ export function AnsweringCard({
   // `submitForScoring`'s local parse as an unrecoverable `ZodError`.
   function handleChange(event: ChangeEvent<HTMLTextAreaElement>): void {
     onReplyChange(event.target.value.slice(0, MAX_SCORE_ANSWER_LENGTH));
+  }
+
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>): void {
+    const hasShortcutModifier = isMac ? event.metaKey : event.ctrlKey;
+    if (event.key !== "Enter" || !hasShortcutModifier) return;
+
+    event.preventDefault();
+    if (disabled || buttonDisabled) return;
+    onSend();
   }
 
   return (
@@ -90,11 +132,14 @@ export function AnsweringCard({
         <Textarea
           value={reply}
           onChange={handleChange}
+          onKeyDown={handleKeyDown}
           disabled={disabled}
           autoFocus
           rows={3}
           maxLength={MAX_SCORE_ANSWER_LENGTH}
           aria-label="Your reply"
+          aria-describedby={footerHint ? ANSWERING_SHORTCUT_HINT_ID : undefined}
+          aria-keyshortcuts={footerHint ? shortcutKey : undefined}
           className={stopped ? "disabled:bg-rule disabled:text-slate" : undefined}
         />
         {submitting ? (
@@ -119,7 +164,12 @@ export function AnsweringCard({
         )}
       >
         {!submitting && footerHint ? (
-          <p className="mb-0 font-sans text-caption text-slate">{footerHint}</p>
+          <p
+            id={ANSWERING_SHORTCUT_HINT_ID}
+            className="mb-0 font-sans text-caption text-slate"
+          >
+            {footerHint}
+          </p>
         ) : null}
         <Button
           onClick={hasError ? onRetry : onSend}
