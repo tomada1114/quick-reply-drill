@@ -38,11 +38,20 @@ export function Dashboard({ storage }: DashboardProps): ReactElement {
 
   useEffect(() => {
     let cancelled = false;
-    const store = createRecordsStore(storage ?? window.localStorage);
     void Promise.resolve().then(() => {
-      if (!cancelled) {
-        setRecords(store.list());
+      if (cancelled) {
+        return;
       }
+      // Blocked site data throws from the `window.localStorage` getter itself,
+      // and a failing store throws from `getItem`; either reads as no history
+      // rather than a crashed page or a "Loading…" that never resolves.
+      let list: DrillRecord[];
+      try {
+        list = createRecordsStore(storage ?? window.localStorage).list();
+      } catch {
+        list = [];
+      }
+      setRecords(list);
     });
     return () => {
       cancelled = true;

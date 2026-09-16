@@ -96,6 +96,16 @@ describe("Dashboard", () => {
     );
   });
 
+  it("shows the empty state when reading storage throws", async () => {
+    const storage = new MapStorage();
+    vi.spyOn(storage, "getItem").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+    render(<Dashboard storage={storage} />);
+
+    expect(await screen.findByText(/No reps yet\./)).toBeInTheDocument();
+  });
+
   it("lists the recent runs newest first, regardless of the order they were stored in", async () => {
     const storage = new MapStorage();
     // Stored oldest-first — the opposite of what the dashboard must display.
