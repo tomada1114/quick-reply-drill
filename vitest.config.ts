@@ -25,6 +25,7 @@ const fixtures = "tests/fixtures/**";
 const automationTests = [
   "tests/ai-openai.test.ts",
   "tests/ai-port.test.ts",
+  "tests/ai-vendor-swap.test.ts",
   "tests/boundaries.test.ts",
   "tests/check-staged.test.ts",
   "tests/ci-sync.test.ts",
