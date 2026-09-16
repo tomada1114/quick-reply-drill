@@ -101,9 +101,8 @@ Every finished rep is written to the browser's own `localStorage`, under the key
 validates on read — a value this code cannot parse, or one written by an envelope
 version it has never seen, is read as empty rather than misread. The store keeps the 50
 most recent records and drops the rest on append. Each record carries the rubric version
-and the model alias it was graded under, which is what lets the dashboard group and
-compare only the records that share both, and what `POST /api/dashboard` refuses to mix
-across.
+it was graded under (and the model alias, for reference); the dashboard groups by rubric
+version alone, and `POST /api/dashboard` refuses a request that mixes rubric versions.
 
 ## Development
 
