@@ -15,7 +15,7 @@ export type CriterionWeights = Readonly<Record<CriterionId, number>>;
 
 /** Equal weighting of the four criteria, used unless a caller supplies another policy. */
 export const EQUAL_WEIGHTS = {
-  clarity: 25,
+  conversation: 25,
   accuracy: 25,
   vocabulary: 25,
   appropriateness: 25,
@@ -28,7 +28,7 @@ export const EQUAL_WEIGHTS = {
  */
 export function criterionScores(sheet: ScoreSheet): Record<CriterionId, number> {
   return {
-    clarity: sheet.answersQuestion + sheet.intentClear,
+    conversation: sheet.respondsToPartner + sheet.keepsItGoing,
     accuracy: sheet.grammar + sheet.spellingPunctuation,
     vocabulary: sheet.wordChoice + sheet.collocation,
     appropriateness: sheet.toneRegister + sheet.chatForm,

@@ -7,13 +7,19 @@
  * records that will store a result. Keep item order stable: it is the order
  * shown in the feedback UI and in {@link ITEM_IDS}.
  */
+
+/**
+ * This rubric serves the goal of keeping a casual conversation going. A future
+ * user-selectable goal needs its own rubric and scenario table pair rather than
+ * a weight change here.
+ */
 export const CRITERIA = [
   {
-    id: "clarity",
-    label: "Gets the message across",
+    id: "conversation",
+    label: "Keeps the conversation going",
     items: [
-      { id: "answersQuestion", label: "Answers the question" },
-      { id: "intentClear", label: "Intent is clear on one read" },
+      { id: "respondsToPartner", label: "Responds to the partner" },
+      { id: "keepsItGoing", label: "Keeps it going" },
     ],
   },
   {
@@ -56,8 +62,8 @@ export type ItemId = (typeof CRITERIA)[number]["items"][number]["id"];
 
 /** The item identifiers in the order the rubric presents them. */
 export const ITEM_IDS = [
-  "answersQuestion",
-  "intentClear",
+  "respondsToPartner",
+  "keepsItGoing",
   "grammar",
   "spellingPunctuation",
   "wordChoice",
@@ -80,4 +86,4 @@ export type Score = (typeof SCORE_LEVELS)[number];
  * bump this value. A stored score is comparable to another only when both
  * records carry the same rubric version.
  */
-export const RUBRIC_VERSION = "2026-09.3";
+export const RUBRIC_VERSION = "2026-09.4";

@@ -20,7 +20,7 @@ export const dashboardOutputSchema = z.object({ summary: z.string() });
 
 const DASHBOARD_INSTRUCTIONS = [
   "You are an English-writing coach summarising a learner's recent practice reps.",
-  "Write one paragraph, 120 to 200 words, describing the overall picture across the four criteria below: clarity, accuracy, vocabulary, and appropriateness.",
+  "Write one paragraph, 120 to 200 words, describing the overall picture across the four criteria below: conversation, accuracy, vocabulary, and appropriateness.",
   "",
   "Rules:",
   "- Name recurring patterns across the reps, with at least one short quotation drawn from a reply as the example.",

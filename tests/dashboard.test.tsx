@@ -53,7 +53,7 @@ function makeRecord(overrides: Partial<DrillRecord> = {}): DrillRecord {
     scores,
     rationales,
     comments: {
-      clarity: "Clear and direct.",
+      conversation: "Keeps the conversation moving.",
       accuracy: "No grammar issues.",
       vocabulary: "Natural word choice.",
       appropriateness: "Right register for a coworker.",
@@ -130,6 +130,17 @@ describe("Dashboard", () => {
     // rows[0] is the header row.
     expect(rows[1]).toHaveTextContent("2026-09-11");
     expect(rows[2]).toHaveTextContent("2026-09-10");
+  });
+
+  it("uses CON for the conversation criterion column", async () => {
+    const storage = new MapStorage();
+    seed(storage, [makeRecord()]);
+
+    render(<Dashboard storage={storage} />);
+    await screen.findAllByRole("row");
+
+    expect(screen.getByRole("columnheader", { name: "CON" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "CLA" })).not.toBeInTheDocument();
   });
 
   it("hides the sparkline with a single record", async () => {

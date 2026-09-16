@@ -554,8 +554,8 @@ describe("Drill", () => {
     expect(screen.getByText("FORCED")).toBeInTheDocument();
     const [record] = createRecordsStore(storage).list();
     expect(record?.forcedSubmit).toBe(true);
-    expect(record?.scores.answersQuestion).toBe(0);
-    expect(record?.rationales.answersQuestion).toBe(
+    expect(record?.scores.respondsToPartner).toBe(0);
+    expect(record?.rationales.respondsToPartner).toBe(
       "No reply was sent before the clock ran out.",
     );
   });

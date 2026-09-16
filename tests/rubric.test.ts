@@ -10,8 +10,8 @@ import {
 import { RUBRIC_DESCRIPTORS } from "../src/core/rubric-descriptors";
 
 const EXPECTED_ITEM_IDS = [
-  "answersQuestion",
-  "intentClear",
+  "respondsToPartner",
+  "keepsItGoing",
   "grammar",
   "spellingPunctuation",
   "wordChoice",
@@ -25,7 +25,7 @@ type ExpectedItemId = (typeof EXPECTED_ITEM_IDS)[number];
 describe("the fixed rubric", () => {
   it("defines four criteria with two unique items each", () => {
     expect(CRITERIA.map((criterion) => criterion.id)).toStrictEqual([
-      "clarity",
+      "conversation",
       "accuracy",
       "vocabulary",
       "appropriateness",
@@ -33,6 +33,14 @@ describe("the fixed rubric", () => {
     expect(CRITERIA.map((criterion) => criterion.items.length)).toStrictEqual([
       2, 2, 2, 2,
     ]);
+    expect(CRITERIA[0]).toStrictEqual({
+      id: "conversation",
+      label: "Keeps the conversation going",
+      items: [
+        { id: "respondsToPartner", label: "Responds to the partner" },
+        { id: "keepsItGoing", label: "Keeps it going" },
+      ],
+    });
     expect(new Set(ITEM_IDS).size).toBe(8);
   });
 
@@ -59,7 +67,7 @@ describe("the fixed rubric", () => {
   });
 
   it("pins the version that makes stored scores comparable", () => {
-    expect(RUBRIC_VERSION).toBe("2026-09.3");
+    expect(RUBRIC_VERSION).toBe("2026-09.4");
   });
 
   it("keeps ItemId closed over the eight table items", () => {

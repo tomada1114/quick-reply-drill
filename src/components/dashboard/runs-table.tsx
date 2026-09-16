@@ -8,7 +8,7 @@ import { formatRecordedAt } from "./dashboard-view";
 
 /** The mono micro-label each criterion column heads with — the lock's "abbreviated" columns. */
 const CRITERION_ABBREVIATIONS: Record<CriterionId, string> = {
-  clarity: "CLA",
+  conversation: "CON",
   accuracy: "ACC",
   vocabulary: "VOC",
   appropriateness: "APP",
