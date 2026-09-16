@@ -43,6 +43,33 @@ function exactByItemId<Value extends z.ZodType>(value: Value) {
 }
 
 /**
+ * The ceiling, in characters, an ISO 8601 UTC `recordedAt` may hold.
+ *
+ * @remarks
+ * `src/core/wire-dashboard.ts` imports this rather than declaring a second
+ * copy, so the stored record and the dashboard wire contract cannot drift
+ * apart. See {@link recordedAtSchema} for why the format itself is pinned.
+ */
+export const MAX_RECORDED_AT_LENGTH = 40;
+
+/**
+ * An ISO 8601 UTC datetime — `Z`, never a `+09:00`-style offset — bounded to
+ * {@link MAX_RECORDED_AT_LENGTH}.
+ *
+ * @remarks
+ * Pinned rather than a bare `z.string()`: an offset-bearing string sorts
+ * lexicographically by its characters, not by the instant it names, so
+ * `"2026-09-01T10:00:00+09:00"` (01:00 UTC) would sort after the
+ * chronologically earlier `"2026-09-01T05:00:00Z"`. Every sort over
+ * `recordedAt` — `src/server/prompts/dashboard.ts`'s included — must compare
+ * `Date.parse` results, never the raw strings, and this schema is what makes
+ * that comparison meaningful by ruling out an offset in the first place.
+ * `new Date().toISOString()`, the only value this application has ever
+ * written to the field, always produces this shape.
+ */
+export const recordedAtSchema = z.iso.datetime().max(MAX_RECORDED_AT_LENGTH);
+
+/**
  * One completed drill attempt, as it is stored and read back.
  *
  * @remarks
@@ -57,8 +84,8 @@ function exactByItemId<Value extends z.ZodType>(value: Value) {
 export const drillRecordSchema = z.object({
   /** Unique identifier, minted with `crypto.randomUUID()`. */
   id: z.string(),
-  /** When the attempt was recorded, as an ISO 8601 timestamp. */
-  recordedAt: z.string(),
+  /** When the attempt was recorded. See {@link recordedAtSchema}. */
+  recordedAt: recordedAtSchema,
   question: z.object({
     /** The one-line question the learner was asked. */
     text: z.string(),
