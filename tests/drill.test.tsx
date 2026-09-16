@@ -222,7 +222,7 @@ describe("Drill", () => {
 
     clickStart();
 
-    expect(screen.getByText("0:30")).toBeInTheDocument();
+    expect(screen.getByText("1:00")).toBeInTheDocument();
     expect(screen.getByText("Question number 1?")).toBeInTheDocument();
   });
 
@@ -527,7 +527,7 @@ describe("Drill", () => {
     clickStart();
     typeReply("Sure, I'm free then.");
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(60_000);
     });
     await flush();
 
@@ -545,7 +545,7 @@ describe("Drill", () => {
 
     clickStart();
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(60_000);
     });
     await flush();
 
@@ -573,7 +573,7 @@ describe("Drill", () => {
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
     expect(screen.getByText("Question number 2?")).toBeInTheDocument();
-    expect(screen.getByText("0:30")).toBeInTheDocument();
+    expect(screen.getByText("1:00")).toBeInTheDocument();
     expect(questionsMock).toHaveBeenCalledTimes(1);
   });
 
@@ -660,7 +660,7 @@ describe("Drill", () => {
 
     clickStart();
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(60_000);
     });
     await flush();
 

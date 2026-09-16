@@ -46,7 +46,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Quick Reply Drill",
   description:
-    "Answer a one-line English question in thirty seconds, and get it scored the same way every time.",
+    "Answer a one-line English question in sixty seconds, and get it scored the same way every time.",
 };
 
 export default function RootLayout({
