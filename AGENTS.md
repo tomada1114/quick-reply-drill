@@ -98,15 +98,27 @@ on every edit is slow enough that it stops being run at all.
 
 ```
 src/
-├── core/     # framework-free vocabulary: a Result, a domain type, a pure function
-├── ai/       # the LlmPort, its error vocabulary, and the adapters behind it
-├── server/   # the environment read, the composition root, and request handlers
-└── app/      # the Next.js App Router tree: pages, layouts, route handlers
-scripts/      # repository automation, authored as .mjs, never shipped
+├── core/       # framework-free vocabulary: a Result, a domain type, a pure function
+├── ai/         # the LlmPort, its error vocabulary, and the adapters behind it
+├── server/     # the environment read, the composition root, and request handlers
+├── components/ # client UI: the shadcn/ui copies and this app's own components
+└── app/        # the Next.js App Router tree: pages, layouts, route handlers
+scripts/        # repository automation, authored as .mjs, never shipped
 ```
 
-Imports run one way — `app` → `server` → `ai` → `core`. `core` is the bottom of that
-order: it names no framework and no vendor SDK, so it survives a change of either.
+Imports run one way — `app` → `server` → `ai` → `core`, with `app` → `components` →
+`core` beside it. `core` is the bottom of both: it names no framework and no vendor SDK,
+so it survives a change of either. `components` is the one zone reached from `app` alone
+— it renders what it is handed, so it names no page, no handler and nothing in the AI
+layer, and `server`, `ai` and `core` in turn name nothing in it.
+
+A module under `src/` is reached either relatively or through the `@/*` → `./src/*`
+alias, which exists because shadcn/ui writes `@/components/...` into every component it
+copies in. Three resolvers have to be told about it separately — `tsconfig.json`'s
+`paths`, `vitest.config.ts`'s `resolve.alias`, and `eslint.config.mjs`, which matches
+specifier text and so carries an `@/` twin of every zone pattern — and
+`tests/boundaries.test.ts` resolves both spellings, so neither is a way around the order
+above.
 
 ### The three seams
 

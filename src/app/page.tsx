@@ -7,6 +7,13 @@ import type { ReactElement } from "react";
  * It is deliberately the smallest page that proves the App Router tree is
  * wired: `tests/server-smoke.test.ts` serves the build and asks for it over
  * HTTP, which is the only check that sees a page at all.
+ *
+ * The page's padding is a Tailwind utility applied once on `<body>` in
+ * `src/app/layout.tsx` rather than a rule in `globals.css`, which is what
+ * makes `tests/server-smoke.test.ts`'s stylesheet assertion a real check: it
+ * fetches the built CSS and looks for this class, so a broken PostCSS
+ * pipeline fails the suite instead of rendering an unstyled page nobody
+ * looks at.
  */
 export default function HomePage(): ReactElement {
   return (

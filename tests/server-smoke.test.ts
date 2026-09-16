@@ -47,7 +47,7 @@ const SHUTDOWN_GRACE_MS = 5_000;
  * nothing under any of them — it writes `.next/` and `next-env.d.ts` — so a
  * source newer than the build means the build is not of that source.
  */
-const BUILD_INPUTS = ["src", "next.config.ts"];
+const BUILD_INPUTS = ["src", "next.config.ts", "postcss.config.mjs"];
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -374,6 +374,28 @@ describe("the built application, served by `next start`", () => {
     expect(document).toMatch(
       /<meta name="description" content="[^"]*thirty seconds[^"]*"/u,
     );
+  });
+
+  // The only check that sees Tailwind at all. Nothing else in the repository
+  // runs PostCSS: a unit test renders `className="p-8"` into the DOM whether
+  // or not a stylesheet was ever generated, so a missing `postcss.config.mjs`,
+  // a dropped `@import "tailwindcss"` or a plugin that failed silently would
+  // ship an unstyled application with every other gate green.
+  it("serves a stylesheet carrying the utility the home page uses", async () => {
+    const document = await (await fetch(baseUrl)).text();
+    const href = /<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/u.exec(document)?.[1];
+    if (href === undefined) {
+      throw new Error(`the home page linked no stylesheet:\n${document}`);
+    }
+
+    const stylesheet = await fetch(new URL(href, baseUrl));
+
+    expect(stylesheet.status).toBe(200);
+    expect(stylesheet.headers.get("content-type")).toContain("text/css");
+    // The rule itself, not merely the selector: Tailwind emits nothing at all
+    // for a utility it never scanned, and a `.p-8` with an empty body would
+    // mean the theme behind the utility is gone.
+    await expect(stylesheet.text()).resolves.toMatch(/\.p-8\s*\{[^}]*padding:/u);
   });
 
   it("serves an unknown path as a 404 document in one shell", async () => {

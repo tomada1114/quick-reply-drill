@@ -64,8 +64,21 @@ function modulesUnder(directory: string): string[] {
   });
 }
 
-/** The repo-relative module a relative specifier names, or `undefined`. */
+/**
+ * The repo-relative module a specifier names, or `undefined` for a package.
+ *
+ * @remarks
+ * Two spellings reach a module of this repository's own. A relative one is
+ * resolved against the importer's directory. An `@/…` one goes through the
+ * alias `tsconfig.json` maps to `./src/*`, so it is resolved against `src/`
+ * whatever the importer's depth — without this branch every zone assertion
+ * below would silently stop seeing an aliased import, which is the shape
+ * shadcn/ui writes and the reason the alias exists at all.
+ */
 function resolveWithin(module: string, specifier: string): string | undefined {
+  if (specifier.startsWith("@/")) {
+    return path.posix.normalize(path.posix.join("src", specifier.slice("@/".length)));
+  }
   if (!specifier.startsWith(".")) {
     return undefined;
   }
@@ -112,6 +125,7 @@ import defaultExport from "next";
 import { named } from "../core/result";
 import "./globals.css";
 import type { OnlyAType } from "@ai-sdk/openai";
+import { aliased } from "@/core/result";
 export { re } from "./errors";
 const lazy = await import("../ai/index");
 const legacy = require("node:fs");
@@ -147,6 +161,7 @@ describe("the import scanner the zone assertions run on", () => {
       "../core/result",
       "./globals.css",
       "@ai-sdk/openai",
+      "@/core/result",
       "./errors",
       "../ai/index",
       "node:fs",
@@ -190,6 +205,20 @@ describe("the import scanner the zone assertions run on", () => {
     );
     expect(resolveWithin("src/core/result.ts", "next")).toBeUndefined();
   });
+
+  it("resolves an @/ specifier against src/, from any depth, and no package name", () => {
+    expect(
+      resolveWithin("src/components/ui/button.tsx", "@/components/lib/utils"),
+    ).toBe("src/components/lib/utils");
+    expect(resolveWithin("src/app/page.tsx", "@/ai/index")).toBe("src/ai/index");
+    // The whole point of the `@/` branch: the same specifier resolves to the
+    // same module whatever file names it, which is what a `../`-relative
+    // specifier cannot do and what makes an aliased import worth a boundary.
+    expect(resolveWithin("src/core/result.ts", "@/ai/index")).toBe("src/ai/index");
+    // A scoped package is `@scope/name`; `/` is not a legal scope, so nothing
+    // a registry publishes can be mistaken for an aliased path.
+    expect(resolveWithin("src/core/result.ts", "@ai-sdk/openai")).toBeUndefined();
+  });
 });
 
 // --- the zone edges ----------------------------------------------------------
@@ -198,18 +227,24 @@ describe("the import scanner the zone assertions run on", () => {
  * Every zone under `src/`, and the zones a module in it may not import.
  *
  * @remarks
- * AGENTS.md's `app → server → ai → core` written as a table. A zone added to
+ * AGENTS.md's `app → server → ai → core`, with `app → components → core`
+ * beside it, written as a table. A zone added to
  * `src/` has to be
  * given a row here before this suite passes, which is the review the table
  * exists to force. `eslint.config.mjs` states the same edges as
  * `no-restricted-imports` groups; the two layers are checked independently, so
  * a rule deleted there still fails here.
+ *
+ * `src/components` is listed in three other rows as well as carrying its own:
+ * a boundary only one side enforces is one a single edit removes, so the zones
+ * below it name it and it names them.
  */
 const FORBIDDEN_ZONE_IMPORTS: Readonly<Record<string, readonly string[]>> = {
-  "src/ai": ["src/app", "src/server"],
+  "src/ai": ["src/app", "src/components", "src/server"],
   "src/app": [],
-  "src/core": ["src/ai", "src/app", "src/server"],
-  "src/server": ["src/app"],
+  "src/components": ["src/ai", "src/app", "src/server"],
+  "src/core": ["src/ai", "src/app", "src/components", "src/server"],
+  "src/server": ["src/app", "src/components"],
 };
 
 /** The AI layer's whole surface, as a repo-relative module. */
@@ -272,7 +307,16 @@ function aiLayerBypasses(modules: readonly Module[]): string[] {
   );
 }
 
-describe("src/ imports run one way, app → server → ai → core", () => {
+/** `"<file>: <specifier>"` for every import of `modules` reaching `pkg`. */
+function packageOffenders(modules: readonly Module[], pkg: string): string[] {
+  return modules.flatMap((module) =>
+    module.specifiers
+      .filter((specifier) => importsPackage(specifier, pkg))
+      .map((specifier) => `${module.file}: ${specifier}`),
+  );
+}
+
+describe("src/ imports run one way, app → server → ai → core and app → components → core", () => {
   it("reaches every zone the table names", () => {
     const unscanned = Object.keys(FORBIDDEN_ZONE_IMPORTS).filter(
       (zone) => !sourceModules.some((module) => inZone(module.file, zone)),
@@ -313,6 +357,25 @@ describe("src/ imports run one way, app → server → ai → core", () => {
     ]);
     expect(offenders).toStrictEqual(["src/core/probe.ts: ../server/env"]);
   });
+
+  // The same control for the spelling the alias made possible. Without the
+  // `@/` branch in `resolveWithin` this crossing resolves to nothing and the
+  // row above it passes while enforcing nothing, which is the exact failure
+  // the alias would otherwise have introduced into every zone at once.
+  it("reports an aliased crossing too, so the @/ spelling is not a way around the table", () => {
+    const offenders = crossZoneOffenders([
+      {
+        file: "src/components/probe.tsx",
+        specifiers: [
+          "@/server/env",
+          "@/core/result",
+          "@/components/lib/utils",
+          "react",
+        ],
+      },
+    ]);
+    expect(offenders).toStrictEqual(["src/components/probe.tsx: @/server/env"]);
+  });
 });
 
 /**
@@ -334,12 +397,7 @@ describe("src/core/ is framework-free and language-model-SDK-free", () => {
   const forbidden = ["next", "react", "react-dom", ...LLM_SDKS];
 
   it.each(forbidden)("imports no %s", (pkg) => {
-    const offenders = modulesIn("src/core").flatMap((module) =>
-      module.specifiers
-        .filter((specifier) => importsPackage(specifier, pkg))
-        .map((specifier) => `${module.file}: ${specifier}`),
-    );
-    expect(offenders).toStrictEqual([]);
+    expect(packageOffenders(modulesIn("src/core"), pkg)).toStrictEqual([]);
   });
 });
 
@@ -349,12 +407,7 @@ describe("src/ai/ outside adapters imports no language-model SDK", () => {
   );
 
   it.each(LLM_SDKS)("imports no %s", (pkg) => {
-    const offenders = nonAdapterModules.flatMap((module) =>
-      module.specifiers
-        .filter((specifier) => importsPackage(specifier, pkg))
-        .map((specifier) => `${module.file}: ${specifier}`),
-    );
-    expect(offenders).toStrictEqual([]);
+    expect(packageOffenders(nonAdapterModules, pkg)).toStrictEqual([]);
   });
 });
 
@@ -401,12 +454,19 @@ describe("src/app/ and src/server/ reach the AI layer only through src/ai/index.
   });
 
   it.each(LLM_SDKS)("imports no %s", (pkg) => {
-    const offenders = modulesIn("src/app", "src/server").flatMap((module) =>
-      module.specifiers
-        .filter((specifier) => importsPackage(specifier, pkg))
-        .map((specifier) => `${module.file}: ${specifier}`),
-    );
-    expect(offenders).toStrictEqual([]);
+    expect(packageOffenders(modulesIn("src/app", "src/server"), pkg)).toStrictEqual([]);
+  });
+});
+
+describe("src/components/ is client UI: no language-model SDK, no server-only", () => {
+  const componentModules = modulesIn("src/components");
+
+  // `server-only` throws on import outside a React Server Components graph, so
+  // a component carrying it can never be a Client Component — which is the one
+  // thing this zone exists to be able to become. Checked alongside the
+  // language-model SDKs, since both are the same "reaches `pkg`" shape.
+  it.each([...LLM_SDKS, "server-only"])("imports no %s", (pkg) => {
+    expect(packageOffenders(componentModules, pkg)).toStrictEqual([]);
   });
 });
 

@@ -67,6 +67,17 @@ Tailwind v4, shadcn/ui, and Vercel AI Elements. Tokens are declared once in the 
 block of the global stylesheet and consumed as utilities; a component never carries a
 raw hex, a one-off `px` type size, or an arbitrary-value color.
 
+- Where a copied component lands, and how it imports: `components.json` points every
+  shadcn alias inside one zone — `@/components` (components), `@/components/ui` (ui),
+  `@/components/lib` (lib), `@/components/lib/utils` (utils), `@/components/hooks`
+  (hooks) — so `pnpm dlx shadcn@latest add <name>` writes into `src/components/` and
+  nowhere else. `@/*` maps to `./src/*`. The registry's current output imports `cn` from
+  its own `cn` package and `Slot` from the `radix-ui` umbrella; this repository uses its
+  own `src/components/lib/utils.ts` and `@radix-ui/react-slot` instead, so a newly added
+  component needs those two imports rewritten on the way in (`managing-dependencies`
+  holds why). `src/components/` may name `src/core/`, the framework and the UI
+  libraries, and nothing else under `src/` — AGENTS.md's Architecture section owns that
+  edge, and `eslint.config.mjs` plus `tests/boundaries.test.ts` enforce it.
 - shadcn/ui and AI Elements components are copied into this repository, so they are
   ordinary source files to edit, not a dependency to configure around. Restyle the copy
   to the tokens on the way in — an untouched default carries its own neutral palette and

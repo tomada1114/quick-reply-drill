@@ -23,7 +23,7 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>): ReactElement {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="p-8">{children}</body>
     </html>
   );
 }
