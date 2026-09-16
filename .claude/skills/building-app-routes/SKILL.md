@@ -149,11 +149,9 @@ through the same helper instead of calling `request.json()`, and keep both refus
 ahead of the port: a request rejected after the model has answered has already been paid
 for.
 
-The endpoint all of this is illustrated with is the AI layer's only caller, so removing
-that layer deletes `src/app/api/` and `src/server/composition.ts` outright. The pattern
-above outlives them — the first endpoint of your own restores the composition root — but
-until one exists, this section names files that are gone. **BACKGROUND:**
-`starting-an-app`, which owns the removal and lists this skill among the files it edits.
+The endpoint is a worked example of a handler behind the composition root. Replacing the
+provider changes the adapter and composition wiring while this handler pattern stays the
+same; the body limits and port call above remain the shared rules for later routes.
 
 ## Configuration
 

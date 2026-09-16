@@ -12,8 +12,8 @@ TypeScript throughout.
 
 Two things follow from that last part. A fake adapter is wired in by default, so
 `pnpm dev` answers a request before any credential exists — the first thing you do with
-a checkout is run it, not go and find an API key. And the model layer can be deleted in
-one piece instead of unpicked, which a test keeps true rather than a convention.
+a checkout is run it, not go and find an API key. The provider-specific implementation
+stays behind the same port, so callers do not depend on an SDK.
 
 It grew out of a template. The template's locale-prefixed page tree and its `next-intl`
 catalogs are gone — this application renders one language, English — and so is its
@@ -55,8 +55,8 @@ is being read — before the model is asked, on either path. Both ceilings are c
 
 Copy the tree, then work through
 [`starting-an-app`](.agents/skills/starting-an-app/SKILL.md), which owns the procedure
-and the order it runs in: rename first, then decide whether to keep the language-model
-layer or remove it whole, then decide the locales, then run `pnpm check:source` once.
+and the order it runs in: rename first, then adapt the language-model seam, then decide
+the locales, then run `pnpm check:source` once.
 
 The rename is what the title, the description and the author above are waiting for —
 they are this template's own identity strings, deliberately left as placeholders.

@@ -15,14 +15,13 @@ const fixtures = "tests/fixtures/**";
 // because each drives a pure-function module under scripts/lib/ directly and
 // touches nothing else.
 //
-// The boundary suites — ai-layer-removal, boundaries — are
+// The boundary suite — boundaries — is
 // listed for the same reason workflows.test.ts is: they assert against files
 // on disk rather than against imported code, walking whole trees to do it.
 // They are fast today, but their cost scales with the repository rather than
 // with what they import, which is exactly the case the short unit budget is
 // not meant to cover.
 const automationTests = [
-  "tests/ai-layer-removal.test.ts",
   "tests/ai-port.test.ts",
   "tests/boundaries.test.ts",
   "tests/check-staged.test.ts",

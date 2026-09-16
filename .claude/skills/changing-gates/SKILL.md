@@ -297,14 +297,16 @@ Traps that have cost time here:
 - The named blocks are the map: `src/shared-syntax`, `src/size-budget`,
   `public-api/explicit-surface`,
   `boundaries/core-is-framework-free-and-imports-no-zone`,
-  `boundaries/ai-imports-only-core`, `boundaries/port-does-not-know-its-adapters`,
+  `boundaries/ai-non-adapters-import-only-core`,
+  `boundaries/ai-adapters-import-only-core`,
+  `boundaries/port-does-not-know-its-adapters`,
   `boundaries/app-reaches-the-ai-layer-through-src-ai`,
   `boundaries/server-reaches-ai-through-src-ai-and-never-app`,
   `boundaries/private-trees-are-not-importable`, `automation/node-scripts`,
-  `tests/vitest-rules`, `tests/relaxations`. Five of the `boundaries/*` blocks are one
-  import order written per zone, so they match disjoint file sets by construction. Name
-  a new block the same way — the name is what a reader, and ESLint's own config
-  inspector, has to identify it by.
+  `tests/vitest-rules`, `tests/relaxations`. Six of the `boundaries/*` blocks are one
+  import order written per zone, so they match disjoint file sets by construction; the
+  seventh protects private trees outside that order. Name a new block the same way — the
+  name is what a reader, and ESLint's own config inspector, has to identify it by.
 - `tests/boundaries.test.ts` asserts those same edges from the module graph, and it pins
   zones rather than files. An exhaustive list of the modules under `src/` failed on
   every legal new file, which teaches its reader to edit the meta-test until the day

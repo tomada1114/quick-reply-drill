@@ -145,6 +145,17 @@ export function describeLlmPortContract(
       expect(result).toStrictEqual({ ok: true, value: CONTRACT_ANSWER });
     });
 
+    it("answers the same when the caller supplies system-level instructions", async () => {
+      const result = await harness.succeeds().generate({
+        schema: CONTRACT_SCHEMA,
+        instructions: "Answer as a concise English tutor.",
+        prompt: "What is the answer?",
+        outputLanguage: "en",
+      });
+
+      expect(result).toStrictEqual({ ok: true, value: CONTRACT_ANSWER });
+    });
+
     it("resolves rather than throws for a schema carrying an async refinement", async () => {
       // Zod's synchronous `safeParse` *throws* on a schema with an async
       // refine/transform instead of returning a failed result. An adapter that

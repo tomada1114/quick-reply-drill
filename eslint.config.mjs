@@ -40,29 +40,37 @@ const INTERNAL_IS_PRIVATE =
   "src/internal/ is private. Tests reach it through the public surface of the module that owns it (see the `writing-tests` skill), and repository automation must not depend on module internals at all.";
 
 /**
- * Every vendor-named language-model SDK, under each subpath it publishes.
+ * Every language-model SDK, under each subpath it publishes.
  *
  * @remarks
  * `no-restricted-imports` matches the specifier as written and never resolves
  * it, so this ban holds before the package is a dependency and keeps holding
  * if it stops being one. That is what lets the zone boundaries below be
- * stated once, ahead of the adapter that will consume the SDK — which is the
- * state this list is in today, the Anthropic adapter and its SDK having been
- * removed before the OpenAI one exists.
+ * stated once, ahead of the adapters that consume the SDK. The Vercel AI SDK
+ * core is included too: all model SDK imports are implementation details of an
+ * adapter and must not leak into the other zones.
  *
- * Only *vendor-named* packages are listed. The Vercel AI SDK's own core (`ai`)
- * names no vendor, so where it may be imported from is a boundary question
- * this repository has not settled yet rather than one this list pre-empts.
+ * The Vercel AI SDK's own core (`ai`) names no vendor, but it still belongs
+ * behind the adapter boundary. Keeping it in this list makes that boundary
+ * explicit and prevents an SDK call from bypassing `LlmPort`.
  *
- * `openai` is the one entry that has to be anchored by hand. `no-restricted-imports`
- * matches through the `ignore` package, where a pattern carrying no slash matches
- * that name at *any* depth — bare `openai` therefore also catches `./openai` and
- * `../core/openai/index`, relative specifiers that reach a module of this
- * repository's own and have nothing to do with a vendor SDK. The leading `/`
- * anchors it to the whole specifier, which only a bare package name can be. The
- * scoped entries need no such treatment: they already carry a slash.
+ * `openai` and `ai` are the entries that have to be anchored by hand.
+ * `no-restricted-imports` matches through the `ignore` package, where a pattern
+ * carrying no slash matches that name at *any* depth — bare `openai` and `ai`
+ * would therefore also catch `./openai`, `../core/openai/index`, and other
+ * relative specifiers that reach a module of this repository's own and have
+ * nothing to do with a language-model SDK. The leading `/` anchors each one to
+ * the whole specifier, which only a bare package name can be. The scoped entries
+ * need no such treatment: they already carry a slash.
  */
-const VENDOR_LLM_SDK = ["/openai", "/openai/**", "@ai-sdk/**", "@anthropic-ai/**"];
+const LLM_SDK = [
+  "/openai",
+  "/openai/**",
+  "/ai",
+  "/ai/**",
+  "@ai-sdk/**",
+  "@anthropic-ai/**",
+];
 
 /**
  * Each zone under `src/`, as every relative specifier that can reach into it.
@@ -119,11 +127,11 @@ const AI_LAYER_IS_PRIVATE =
 
 /** Why the AI layer names no zone above it, stated by two blocks. */
 const AI_LAYER_LOOKS_ONLY_DOWNWARD =
-  "src/ai/ sits below src/server/ and src/app/ in the import order. A request or a handler concern reaching in here is what stops the layer coming out in one piece — take it as an argument on the LlmPort call instead.";
+  "src/ai/ sits below src/server/ and src/app/ in the import order. A request or handler concern reaching in here inverts that dependency — take it as an argument on the LlmPort call instead.";
 
-/** Why a vendor SDK stops at the adapter that wraps it. */
-const VENDOR_SDK_IS_AN_ADAPTERS_BUSINESS =
-  "Only an adapter under src/ai/adapters/ talks to a vendor SDK. A request or a response crossing this zone is an LlmPort call, so the layer can be swapped — or removed whole — without touching src/app/ or src/server/.";
+/** Why a language-model SDK stops at the adapter that wraps it. */
+const LLM_SDK_IS_AN_ADAPTERS_BUSINESS =
+  "Only an adapter under src/ai/adapters/ talks to a language-model SDK. A request or a response crossing this zone is an LlmPort call, so the provider implementation can change without touching src/app/ or src/server/.";
 
 export default defineConfig([
   // Only generated trees are ignored; everything hand-written is linted,
@@ -271,7 +279,7 @@ export default defineConfig([
   // --- zone boundaries -------------------------------------------------------
   //
   // AGENTS.md states one import order — `app` → `server` → `ai` → `core` — and
-  // the five blocks below are that order, written per zone as the zones each
+  // the blocks below are that order, written per zone as the zones each
   // one may not name. On top of the order, `src/app/` and `src/server/`
   // reach the AI layer only through `src/ai/index.ts`.
   // `tests/boundaries.test.ts` asserts the same shape from the module graph, so
@@ -299,10 +307,10 @@ export default defineConfig([
                 "react/**",
                 "react-dom",
                 "react-dom/**",
-                ...VENDOR_LLM_SDK,
+                ...LLM_SDK,
               ],
               message:
-                "src/core/ holds the vocabulary the other zones are written in — a Result, a domain type, a pure function — and it stays free of the framework and of any vendor SDK so it survives a change of either. Put the framework-aware code in src/app/ or src/server/ and the vendor-aware code behind src/ai/.",
+                "src/core/ holds the vocabulary the other zones are written in — a Result, a domain type, a pure function — and it stays free of the framework and of any language-model SDK so it survives a change of either. Put the framework-aware code in src/app/ or src/server/ and the provider-aware code behind src/ai/.",
             },
             {
               group: [...ZONE.ai, ...ZONE.server, ...ZONE.app],
@@ -315,11 +323,33 @@ export default defineConfig([
     },
   },
   {
-    name: "boundaries/ai-imports-only-core",
+    name: "boundaries/ai-non-adapters-import-only-core",
     files: ["src/ai/**/*.ts", "src/ai/**/*.tsx"],
-    // `src/ai/port.ts` has its own block below, which restates these patterns
-    // alongside the adapter ban only the port carries.
-    ignores: ["src/ai/port.ts"],
+    // `src/ai/port.ts` and the adapter subtree have dedicated blocks below:
+    // the port restates these patterns alongside its adapter ban, while an
+    // adapter keeps only the downward-zone restriction and may use its SDK.
+    ignores: ["src/ai/port.ts", "src/ai/adapters/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [...ZONE.app, ...ZONE.server],
+              message: AI_LAYER_LOOKS_ONLY_DOWNWARD,
+            },
+            {
+              group: LLM_SDK,
+              message: LLM_SDK_IS_AN_ADAPTERS_BUSINESS,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: "boundaries/ai-adapters-import-only-core",
+    files: ["src/ai/adapters/**/*.ts", "src/ai/adapters/**/*.tsx"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -353,6 +383,10 @@ export default defineConfig([
               group: [...ZONE.app, ...ZONE.server],
               message: AI_LAYER_LOOKS_ONLY_DOWNWARD,
             },
+            {
+              group: LLM_SDK,
+              message: LLM_SDK_IS_AN_ADAPTERS_BUSINESS,
+            },
           ],
         },
       ],
@@ -371,8 +405,8 @@ export default defineConfig([
               message: AI_LAYER_IS_PRIVATE,
             },
             {
-              group: VENDOR_LLM_SDK,
-              message: VENDOR_SDK_IS_AN_ADAPTERS_BUSINESS,
+              group: LLM_SDK,
+              message: LLM_SDK_IS_AN_ADAPTERS_BUSINESS,
             },
           ],
         },
@@ -392,8 +426,8 @@ export default defineConfig([
               message: AI_LAYER_IS_PRIVATE,
             },
             {
-              group: VENDOR_LLM_SDK,
-              message: VENDOR_SDK_IS_AN_ADAPTERS_BUSINESS,
+              group: LLM_SDK,
+              message: LLM_SDK_IS_AN_ADAPTERS_BUSINESS,
             },
             {
               group: [...ZONE.app],
