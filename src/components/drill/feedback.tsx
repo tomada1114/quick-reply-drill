@@ -13,6 +13,13 @@ interface FeedbackProps {
   /** The rep before this one, for the score delta — absent for the first rep. */
   readonly previous?: DrillRecord | undefined;
   readonly onNext: () => void;
+  /**
+   * Set when this record could not be written to local storage. Shown as a
+   * plain, non-blocking notice below the total — never a reason to withhold
+   * the feedback itself, which the learner's already-graded score earned
+   * regardless of whether it persisted.
+   */
+  readonly saveError: unknown;
 }
 
 /** `+3 ▲` / `-2 ▼` / `±0`, mono and monochrome — never a colored chip. */
@@ -33,7 +40,12 @@ function formatDelta(delta: number): string {
  * one filled `Next` action in the footer — the same position `Send` held on
  * the drill card, so the rep loop never moves the pointer.
  */
-export function Feedback({ record, previous, onNext }: FeedbackProps): ReactElement {
+export function Feedback({
+  record,
+  previous,
+  onNext,
+  saveError,
+}: FeedbackProps): ReactElement {
   const total = totalScore(record.scores);
   const scores = criterionScores(record.scores);
   const delta =
@@ -57,6 +69,11 @@ export function Feedback({ record, previous, onNext }: FeedbackProps): ReactElem
           <span className="font-mono text-micro uppercase text-status">FORCED</span>
         ) : null}
       </div>
+      {saveError !== undefined ? (
+        <p className="font-sans text-caption text-slate">
+          This score was not saved to your local history.
+        </p>
+      ) : null}
       <DrillDivider />
       <div className="flex flex-col gap-4">
         {CRITERIA.map((criterion) => (

@@ -54,7 +54,7 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>): ReactElement {
   return (
     <html lang="en" className={`${rubik.variable} ${ibmPlexMono.variable}`}>
-      <body className="p-8">{children}</body>
+      <body className="p-4 min-[720px]:p-8">{children}</body>
     </html>
   );
 }

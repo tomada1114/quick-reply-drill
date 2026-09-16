@@ -3,7 +3,7 @@ import type { ChangeEvent, ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/lib/utils";
-import type { WireQuestion } from "@/core/wire";
+import { MAX_SCORE_ANSWER_LENGTH, type WireQuestion } from "@/core/wire";
 
 import { DrillCard, DrillDivider } from "./card";
 import { BODY_TEXT_CLASS_NAME, describeApiError, formatCountdown } from "./format";
@@ -53,8 +53,13 @@ export function AnsweringCard({
   const buttonLabel = hasError ? "Retry" : "Send";
   const buttonDisabled = hasError ? false : submitting || reply.trim() === "";
 
+  // Clamped here, not only through the `maxLength` attribute below: a native
+  // `maxLength` stops a real browser's typing and pasting, but this is what
+  // guarantees the invariant regardless of how `value` arrives, so `reply`
+  // can never carry more than `scoreRequestSchema` accepts and reach
+  // `submitForScoring`'s local parse as an unrecoverable `ZodError`.
   function handleChange(event: ChangeEvent<HTMLTextAreaElement>): void {
-    onReplyChange(event.target.value);
+    onReplyChange(event.target.value.slice(0, MAX_SCORE_ANSWER_LENGTH));
   }
 
   return (
@@ -86,6 +91,7 @@ export function AnsweringCard({
           disabled={disabled}
           autoFocus
           rows={3}
+          maxLength={MAX_SCORE_ANSWER_LENGTH}
           aria-label="Your reply"
         />
         {hasError ? (

@@ -7,7 +7,12 @@ import {
   type RecordStorage,
 } from "../src/components/lib/records-store";
 import { CRITERIA, ITEM_IDS } from "../src/core/rubric";
-import type { QuestionsResponse, ScoreResponse, WireQuestion } from "../src/core/wire";
+import {
+  MAX_SCORE_ANSWER_LENGTH,
+  type QuestionsResponse,
+  type ScoreResponse,
+  type WireQuestion,
+} from "../src/core/wire";
 
 /**
  * `Drill` takes its `storage` prop and every test here passes one, so no
@@ -27,6 +32,25 @@ class MapStorage implements RecordStorage {
 
   removeItem(key: string): void {
     this.data.delete(key);
+  }
+}
+
+/**
+ * A `RecordStorage` whose every write fails, the way a full quota or a
+ * blocked/private-mode `localStorage` would — for asserting that a rep still
+ * reaches feedback (F2) even when persisting it does not work.
+ */
+class ThrowingStorage implements RecordStorage {
+  getItem(): string | null {
+    return null;
+  }
+
+  setItem(): void {
+    throw new Error("storage is not available");
+  }
+
+  removeItem(): void {
+    // Nothing was ever written; nothing to remove.
   }
 }
 
@@ -248,5 +272,106 @@ describe("Drill", () => {
     expect(screen.getByText("80")).toBeInTheDocument();
     const [record] = createRecordsStore(storage).list();
     expect(record?.answer).toBe("Sure, I'm free then.");
+  });
+
+  it("caps the reply at the wire ceiling so an over-length paste cannot trap a retry loop", async () => {
+    const { scoreMock } = stubFetch();
+    scoreMock.mockReturnValueOnce(jsonResponse(200, makeScoreResponse()));
+    await renderDrill(new MapStorage());
+
+    clickStart();
+    typeReply("x".repeat(MAX_SCORE_ANSWER_LENGTH + 100));
+
+    expect(screen.getByLabelText("Your reply")).toHaveValue(
+      "x".repeat(MAX_SCORE_ANSWER_LENGTH),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await flush();
+
+    expect(screen.getByText("80")).toBeInTheDocument();
+  });
+
+  it("shows feedback for a graded reply even when the record store cannot persist it", async () => {
+    const { scoreMock } = stubFetch();
+    scoreMock.mockReturnValueOnce(jsonResponse(200, makeScoreResponse()));
+    await renderDrill(new ThrowingStorage());
+
+    clickStart();
+    typeReply("Sure, I'm free then.");
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await flush();
+
+    expect(scoreMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("80")).toBeInTheDocument();
+    expect(
+      screen.getByText("This score was not saved to your local history."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows feedback for a forced-empty record even when the record store cannot persist it", async () => {
+    const { scoreMock } = stubFetch();
+    await renderDrill(new ThrowingStorage());
+
+    clickStart();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+    await flush();
+
+    expect(scoreMock).not.toHaveBeenCalled();
+    expect(screen.getByText("FORCED")).toBeInTheDocument();
+    expect(
+      screen.getByText("This score was not saved to your local history."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the idle screen as waiting, not failed, while a background refill is still in flight", async () => {
+    // A fresh `Response` per call, not `mockReturnValue`: a `Response` body
+    // can only be read once, and this stub answers `/api/score` five times.
+    const scoreMock = vi.fn(() => jsonResponse(200, makeScoreResponse()));
+    let resolveRefill: ((value: Response) => void) | undefined;
+    let questionsCallCount = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("/api/questions")) {
+          questionsCallCount += 1;
+          if (questionsCallCount === 1) {
+            return Promise.resolve(jsonResponse(200, QUESTION_BATCH));
+          }
+          // The refill triggered once the last queued question reached the
+          // screen: left pending so the queue can actually drain to empty
+          // before it resolves.
+          return new Promise<Response>((resolve) => {
+            resolveRefill = resolve;
+          });
+        }
+        if (url.endsWith("/api/score")) {
+          return Promise.resolve(scoreMock());
+        }
+        throw new Error(`unexpected fetch to ${url}`);
+      }),
+    );
+    await renderDrill(new MapStorage());
+
+    clickStart();
+    // Answer and advance through the whole five-question batch so the queue
+    // drains to zero while its one automatic refill is still unresolved.
+    for (let rep = 0; rep < 5; rep += 1) {
+      typeReply("Sure, I'm free then.");
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      await flush();
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    }
+
+    expect(screen.getByText("Loading questions…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/ERR_UNKNOWN/)).not.toBeInTheDocument();
+
+    resolveRefill?.(jsonResponse(200, QUESTION_BATCH));
+    await flush();
+
+    expect(screen.getByText("Question number 1?")).toBeInTheDocument();
   });
 });

@@ -52,6 +52,7 @@ export function Drill({ storage }: DrillProps): ReactElement {
             record={drill.record}
             previous={drill.previousRecord}
             onNext={drill.onNext}
+            saveError={drill.recordSaveError}
           />
         ) : null}
       </div>

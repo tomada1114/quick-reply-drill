@@ -33,6 +33,13 @@ export interface UseDrillResult {
   readonly submitting: boolean;
   readonly record: DrillRecord | undefined;
   readonly previousRecord: DrillRecord | undefined;
+  /**
+   * Set when the most recent {@link DrillRecord} could not be written to
+   * `storage`; `undefined` otherwise. A screen shows this alongside the
+   * feedback it already has — never in place of it, and never as a reason to
+   * re-request a score that already arrived.
+   */
+  readonly recordSaveError: unknown;
   readonly onStart: () => void;
   readonly onSend: () => void;
   readonly onRetryScore: () => void;
@@ -64,6 +71,7 @@ export function useDrill(storage: RecordStorage | undefined): UseDrillResult {
     current?: DrillRecord | undefined;
     previous?: DrillRecord | undefined;
   }>({});
+  const [recordSaveError, setRecordSaveError] = useState<unknown>(undefined);
 
   // Set only by `onNext`, and only read by the effect below: it marks this
   // `"idle"` stage as a between-rep gap waiting on a question that may
@@ -78,7 +86,21 @@ export function useDrill(storage: RecordStorage | undefined): UseDrillResult {
 
   const finishRecord = useCallback(
     (record: DrillRecord) => {
-      getStore().append(record);
+      // A blocked or full `localStorage` (Safari private mode, a quota limit)
+      // must not throw out of here: on the graded path this is called from
+      // inside `useSubmission`'s `submit`, whose `try` would otherwise catch
+      // it and show a successful score as a scoring error; on the
+      // forced-empty path it is called straight from the countdown's
+      // `onExpire`, where nothing else would catch it at all. Either way the
+      // score already arrived and the rep still finishes — the failure is
+      // surfaced separately, through `recordSaveError`, never by discarding
+      // or re-requesting what was already graded.
+      try {
+        getStore().append(record);
+        setRecordSaveError(undefined);
+      } catch (caught) {
+        setRecordSaveError(caught);
+      }
       setRecordPair((previous) => ({ current: record, previous: previous.current }));
       setStage("feedback");
     },
@@ -153,6 +175,7 @@ export function useDrill(storage: RecordStorage | undefined): UseDrillResult {
     submitting: submission.submitting,
     record: recordPair.current,
     previousRecord: recordPair.previous,
+    recordSaveError,
     onStart: () => {
       if (currentQuestion) {
         startRep(currentQuestion);
