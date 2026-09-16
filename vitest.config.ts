@@ -22,6 +22,7 @@ const fixtures = "tests/fixtures/**";
 // with what they import, which is exactly the case the short unit budget is
 // not meant to cover.
 const automationTests = [
+  "tests/ai-openai.test.ts",
   "tests/ai-port.test.ts",
   "tests/boundaries.test.ts",
   "tests/check-staged.test.ts",
