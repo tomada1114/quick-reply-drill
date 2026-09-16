@@ -8,8 +8,9 @@ import {
   questionsRequestSchema,
   type QuestionsResponse,
 } from "../../core/wire";
-import { failure, llmFailure, readJsonBody, rejectCrossOrigin } from "../http";
+import { failure, llmFailure, rejectCrossOrigin } from "../http";
 import { buildQuestionsRequest } from "../prompts/questions";
+import { readJsonBody } from "../request-body";
 
 /**
  * What the handler needs from the outside world.

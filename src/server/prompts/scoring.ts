@@ -1,13 +1,8 @@
 import * as z from "zod";
 
-import {
-  CRITERIA,
-  ITEM_IDS,
-  SCORE_LEVELS,
-  type CriterionId,
-  type ItemId,
-} from "../../core/rubric";
+import { CRITERIA, SCORE_LEVELS, type ItemId } from "../../core/rubric";
 import { RUBRIC_DESCRIPTORS } from "../../core/rubric-descriptors";
+import { scoreCommentsSchema, scoreItemsSchema } from "../../core/wire";
 import { PROMPT_OUTPUT_LANGUAGE, type PromptRequest } from "./request";
 
 /**
@@ -22,34 +17,6 @@ import { PROMPT_OUTPUT_LANGUAGE, type PromptRequest } from "./request";
  */
 export { RUBRIC_VERSION } from "../../core/rubric";
 
-/** One item's verdict: the reasoning first, then the level it justifies. */
-const itemResult = z.object({
-  rationale: z.string(),
-  // `z.literal` of the six levels converts to a numeric `enum`, which the
-  // provider's strict JSON Schema mode accepts. A `.min()`/`.max()` pair would
-  // rely on `minimum`/`maximum`, which strict mode does not guarantee.
-  score: z.literal([...SCORE_LEVELS]),
-});
-
-/**
- * The eight item results, keyed by {@link ITEM_IDS} in rubric order.
- *
- * @remarks
- * Built from the rubric rather than retyped, so an item added there cannot be
- * left out of what the model is asked for. The assertion restates only what
- * `ITEM_IDS` already guarantees — it is `readonly ItemId[]` covering the whole
- * union — and the scoring suite pins both the key set and its order.
- */
-const itemsShape = Object.fromEntries(ITEM_IDS.map((id) => [id, itemResult])) as Record<
-  ItemId,
-  typeof itemResult
->;
-
-/** One comment per criterion, keyed by {@link CRITERIA} in rubric order. */
-const commentsShape = Object.fromEntries(
-  CRITERIA.map((criterion) => [criterion.id, z.string()]),
-) as Record<CriterionId, z.ZodString>;
-
 /**
  * What one graded reply comes back as.
  *
@@ -60,10 +27,15 @@ const commentsShape = Object.fromEntries(
  * once the grading it is based on exists. Nothing is optional or nullable —
  * strict structured output rejects both — so an answer that reaches a caller
  * has every field, and a shortfall in *quality* is the prompt's job below.
+ *
+ * The two grading pieces come from `src/core/wire.ts` rather than being
+ * declared here, because `POST /api/score` hands them straight on to its
+ * caller: two copies of this shape would be two things to keep in step, and
+ * `core` cannot import `server` to get them the other way round.
  */
 export const scoringOutputSchema = z.object({
-  items: z.object(itemsShape),
-  comments: z.object(commentsShape),
+  items: scoreItemsSchema,
+  comments: scoreCommentsSchema,
   modelReply: z.string(),
 });
 
