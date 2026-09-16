@@ -126,6 +126,33 @@ describe("drillRecordSchema", () => {
     expectTypeOf<DrillRecord["scores"]>().toEqualTypeOf<Record<ItemId, Score>>();
     expectTypeOf<DrillRecord["rationales"]>().toEqualTypeOf<Record<ItemId, string>>();
   });
+
+  it("accepts the exact shape the current writer produces: new Date().toISOString()", () => {
+    // src/components/drill/use-submission.ts:91 and :136 are the only places
+    // this application has ever written `recordedAt`, and both call
+    // `new Date().toISOString()` directly. This is the regression pinning the
+    // format must not cause: a record in exactly that shape must keep
+    // parsing.
+    const record = makeRecord({ recordedAt: new Date().toISOString() });
+
+    expect(drillRecordSchema.safeParse(record).success).toBe(true);
+  });
+
+  it.each([
+    ["a recordedAt with millisecond precision", "2026-09-01T00:00:00.000Z"],
+    ["a recordedAt with no fractional seconds", "2026-09-01T00:00:00Z"],
+  ])("accepts %s", (_description, recordedAt) => {
+    expect(drillRecordSchema.safeParse(makeRecord({ recordedAt })).success).toBe(true);
+  });
+
+  it.each([
+    ["a recordedAt with no timezone at all", "2026-09-01T00:00:00"],
+    ["a recordedAt carrying a UTC offset instead of Z", "2026-09-01T10:00:00+09:00"],
+    ["an empty recordedAt", ""],
+    ["a recordedAt that is just a date, no time", "2026-09-01"],
+  ])("rejects %s", (_description, recordedAt) => {
+    expect(drillRecordSchema.safeParse(makeRecord({ recordedAt })).success).toBe(false);
+  });
 });
 
 describe("recordsEnvelopeSchema", () => {

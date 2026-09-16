@@ -132,6 +132,23 @@ describe("createRecordsStore", () => {
     expect(second.list()).toStrictEqual([]);
   });
 
+  it.each([
+    ["a recordedAt with millisecond precision", "2026-09-01T00:00:00.000Z"],
+    ["a recordedAt with no fractional seconds", "2026-09-01T00:00:00Z"],
+    // src/components/drill/use-submission.ts:91 and :136 are the only places
+    // this application has ever written `recordedAt`, and both call
+    // `new Date().toISOString()` directly — this is the regression pinning
+    // the format must not cause.
+    ["the exact shape new Date().toISOString() produces", new Date().toISOString()],
+  ])("round-trips a record whose recordedAt is %s", (_description, recordedAt) => {
+    const store = createRecordsStore(new MapStorage(), "test.records");
+    const record = { ...makeRecord("a"), recordedAt };
+
+    store.append(record);
+
+    expect(store.list()).toStrictEqual([record]);
+  });
+
   describe("a broken store never bricks the drill", () => {
     it.each([
       ["a value that is not JSON at all", "{not json"],
@@ -155,6 +172,28 @@ describe("createRecordsStore", () => {
 
       expect(store.list()).toStrictEqual([]);
     });
+
+    it.each([
+      ["a recordedAt with no timezone at all", "2026-09-01T00:00:00"],
+      ["a recordedAt carrying a UTC offset instead of Z", "2026-09-01T10:00:00+09:00"],
+      ["an empty recordedAt", ""],
+      ["a recordedAt that is just a date, no time", "2026-09-01"],
+    ])(
+      "reads an envelope whose one record has %s as an empty list",
+      (_description, recordedAt) => {
+        const storage = new MapStorage();
+        storage.setItem(
+          "test.records",
+          JSON.stringify({
+            version: RECORDS_STORAGE_VERSION,
+            records: [{ ...makeRecord("a"), recordedAt }],
+          }),
+        );
+        const store = createRecordsStore(storage, "test.records");
+
+        expect(store.list()).toStrictEqual([]);
+      },
+    );
 
     it("overwrites garbage with a fresh, valid envelope on the next append", () => {
       const storage = new MapStorage();

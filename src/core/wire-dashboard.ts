@@ -1,5 +1,6 @@
 import * as z from "zod";
 
+import { MAX_RECORDED_AT_LENGTH, recordedAtSchema } from "./records";
 import { CRITERIA, ITEM_IDS, SCORE_LEVELS, type CriterionId } from "./rubric";
 
 /**
@@ -38,8 +39,14 @@ export const MAX_DASHBOARD_RECORDS = 10;
  * and `MAX_DASHBOARD_RECORDED_AT_LENGTH` and `MAX_DASHBOARD_RUBRIC_VERSION_LENGTH`
  * bound the two fields this server writes itself, generously enough for
  * either to grow a few characters without becoming a contract change.
+ *
+ * This one is equal to `src/core/records.ts`'s {@link MAX_RECORDED_AT_LENGTH},
+ * kept under this module's own name because every other `MAX_DASHBOARD_*`
+ * constant here is named for the wire contract it bounds — imported rather
+ * than restated so the stored record and this wire contract cannot drift
+ * apart.
  */
-export const MAX_DASHBOARD_RECORDED_AT_LENGTH = 40;
+export const MAX_DASHBOARD_RECORDED_AT_LENGTH = MAX_RECORDED_AT_LENGTH;
 
 /** @see {@link MAX_DASHBOARD_RECORDED_AT_LENGTH} */
 export const MAX_DASHBOARD_QUESTION_LENGTH = 300;
@@ -59,13 +66,14 @@ export const MAX_DASHBOARD_RUBRIC_VERSION_LENGTH = 32;
 /** A `DrillRecord`, trimmed to what the dashboard's trend paragraph is written from. */
 export const dashboardRecordSchema = z.object({
   /**
-   * When the attempt was recorded. Pinned to an ISO 8601 UTC datetime, never a
-   * bare `z.string()`, because `buildDashboardRequest` sorts records by this
-   * field to write them out newest first — an unpinned format has no
-   * chronological meaning to sort by, and a caller-chosen offset would let a
-   * lexicographically-later string name an earlier instant.
+   * When the attempt was recorded. The same `src/core/records.ts` schema the
+   * stored `DrillRecord` uses, not a second copy: `buildDashboardRequest`
+   * sorts records by this field to write them out newest first, and an
+   * unpinned format has no chronological meaning to sort by — a
+   * caller-chosen offset would let a lexicographically-later string name an
+   * earlier instant.
    */
-  recordedAt: z.iso.datetime().max(MAX_DASHBOARD_RECORDED_AT_LENGTH),
+  recordedAt: recordedAtSchema,
   question: z.object({
     text: z.string().max(MAX_DASHBOARD_QUESTION_LENGTH),
     scenarioLine: z.string().max(MAX_DASHBOARD_SCENARIO_LINE_LENGTH),
