@@ -10,7 +10,11 @@ import {
 import { POST } from "../src/app/api/dashboard/route";
 import { CRITERIA, ITEM_IDS } from "../src/core/rubric";
 import type { Result } from "../src/core/result";
-import { dashboardResponseSchema, type DashboardRecord } from "../src/core/wire";
+import {
+  dashboardResponseSchema,
+  MAX_DASHBOARD_ANSWER_LENGTH,
+  type DashboardRecord,
+} from "../src/core/wire";
 import { dashboardHandler } from "../src/server/composition";
 import { createDashboardHandler } from "../src/server/handlers/dashboard";
 
@@ -229,6 +233,20 @@ describe("POST /api/dashboard", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: "ERR_BAD_REQUEST" },
     });
+  });
+
+  it("refuses a record whose answer is over its ceiling, without echoing it", async () => {
+    const rejected = "hunter2-".repeat(MAX_DASHBOARD_ANSWER_LENGTH);
+
+    const response = await handlerOver(unreachablePort())(
+      postRequest(JSON.stringify({ records: [record({ answer: rejected })] })),
+    );
+    const body = await response.text();
+
+    expect(response.status).toBe(400);
+    expect(body).toContain("ERR_BAD_REQUEST");
+    expect(body).toContain(String(MAX_DASHBOARD_ANSWER_LENGTH));
+    expect(body).not.toContain("hunter2");
   });
 
   it("refuses records that mix rubricVersion without reaching the port", async () => {

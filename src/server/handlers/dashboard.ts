@@ -1,7 +1,13 @@
 import type { LlmPort } from "../../ai/index";
 import {
   dashboardRequestSchema,
+  MAX_DASHBOARD_ANSWER_LENGTH,
+  MAX_DASHBOARD_COMMENT_LENGTH,
+  MAX_DASHBOARD_QUESTION_LENGTH,
+  MAX_DASHBOARD_RECORDED_AT_LENGTH,
   MAX_DASHBOARD_RECORDS,
+  MAX_DASHBOARD_RUBRIC_VERSION_LENGTH,
+  MAX_DASHBOARD_SCENARIO_LINE_LENGTH,
   type DashboardResponse,
 } from "../../core/wire";
 import { failure, llmFailure, rejectCrossOrigin } from "../http";
@@ -18,13 +24,23 @@ export interface DashboardHandlerDependencies {
  * What a rejected body is told, naming every constraint and no content.
  *
  * @remarks
- * Covers both refusals `dashboardRequestSchema` can produce: an array outside
- * `1..MAX_DASHBOARD_RECORDS`, and one that mixes `rubricVersion` across its
- * records — the client is expected to have filtered to one version already.
+ * Covers every refusal `dashboardRequestSchema` can produce: an array outside
+ * `1..MAX_DASHBOARD_RECORDS`, one that mixes `rubricVersion` across its
+ * records — the client is expected to have filtered to one version already —
+ * and a record with a field over its own ceiling. Assembled from the same
+ * constants the schema is built with, so a ceiling moved in
+ * `src/core/wire.ts` cannot leave this sentence stating the old one.
  */
 const REJECTED_BODY_MESSAGE = [
   "The request body must be an object with a `records` array of 1 to",
   `${String(MAX_DASHBOARD_RECORDS)} entries, all sharing the same \`rubricVersion\`.`,
+  `Each record's \`recordedAt\` must be an ISO 8601 UTC datetime of at most`,
+  `${String(MAX_DASHBOARD_RECORDED_AT_LENGTH)} characters, its \`question.text\` at most`,
+  `${String(MAX_DASHBOARD_QUESTION_LENGTH)} characters, its \`question.scenarioLine\` at`,
+  `most ${String(MAX_DASHBOARD_SCENARIO_LINE_LENGTH)} characters, its \`answer\` at most`,
+  `${String(MAX_DASHBOARD_ANSWER_LENGTH)} characters, each of its four \`comments\` at`,
+  `most ${String(MAX_DASHBOARD_COMMENT_LENGTH)} characters, and its \`rubricVersion\` at`,
+  `most ${String(MAX_DASHBOARD_RUBRIC_VERSION_LENGTH)} characters.`,
 ].join(" ");
 
 /**

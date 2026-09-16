@@ -24,6 +24,14 @@ const MAX_QUESTION_LENGTH = 300;
 const MAX_SCENARIO_LINE_LENGTH = 200;
 const MAX_ANSWER_LENGTH = 600;
 
+/** @see MAX_QUESTION_LENGTH, this time for the POST /api/dashboard cases below. */
+const MAX_DASHBOARD_RECORDED_AT_LENGTH = 40;
+const MAX_DASHBOARD_QUESTION_LENGTH = 300;
+const MAX_DASHBOARD_SCENARIO_LINE_LENGTH = 200;
+const MAX_DASHBOARD_ANSWER_LENGTH = 600;
+const MAX_DASHBOARD_COMMENT_LENGTH = 300;
+const MAX_DASHBOARD_RUBRIC_VERSION_LENGTH = 32;
+
 /** One answer body that must parse, for a case to vary a single field of. */
 function answerBody(): unknown {
   return {
@@ -273,6 +281,125 @@ describe("the POST /api/dashboard request body", () => {
       dashboardRecord({ answer: "A different reply." }),
     ];
     expect(dashboardRequestSchema.safeParse({ records }).success).toBe(true);
+  });
+
+  // Every field below is caller-controlled once this endpoint exists, so each
+  // needs the same kind of ceiling `scoreRequestSchema` already holds
+  // `question`, `scenarioLine` and `answer` to — see the score request cases
+  // above for the same shape of table.
+  it.each([
+    [
+      "a recordedAt with millisecond precision",
+      { recordedAt: "2026-09-01T00:00:00.000Z" },
+    ],
+    ["a recordedAt with no fractional seconds", { recordedAt: "2026-09-01T00:00:00Z" }],
+    [
+      "a recordedAt exactly at its length ceiling",
+      {
+        recordedAt: `2026-09-01T00:00:00.${"9".repeat(
+          MAX_DASHBOARD_RECORDED_AT_LENGTH - "2026-09-01T00:00:00.Z".length,
+        )}Z`,
+      },
+    ],
+    [
+      "a question.text at its ceiling",
+      {
+        question: {
+          text: "a".repeat(MAX_DASHBOARD_QUESTION_LENGTH),
+          scenarioLine: "x",
+        },
+      },
+    ],
+    [
+      "a question.scenarioLine at its ceiling",
+      {
+        question: {
+          text: "x",
+          scenarioLine: "a".repeat(MAX_DASHBOARD_SCENARIO_LINE_LENGTH),
+        },
+      },
+    ],
+    ["an answer at its ceiling", { answer: "a".repeat(MAX_DASHBOARD_ANSWER_LENGTH) }],
+    [
+      "a comment at its ceiling",
+      {
+        comments: {
+          clarity: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH),
+          accuracy: "x",
+          vocabulary: "x",
+          appropriateness: "x",
+        },
+      },
+    ],
+    [
+      "a rubricVersion at its ceiling",
+      { rubricVersion: "a".repeat(MAX_DASHBOARD_RUBRIC_VERSION_LENGTH) },
+    ],
+  ])("accepts a record with %s", (_case, overrides) => {
+    expect(
+      dashboardRequestSchema.safeParse({ records: [dashboardRecord(overrides)] })
+        .success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ["a recordedAt with no timezone at all", { recordedAt: "2026-09-01T00:00:00" }],
+    [
+      "a recordedAt carrying a UTC offset instead of Z",
+      { recordedAt: "2026-09-01T10:00:00+09:00" },
+    ],
+    ["an empty recordedAt", { recordedAt: "" }],
+    ["a recordedAt that is just a date, no time", { recordedAt: "2026-09-01" }],
+    [
+      "a recordedAt over its length ceiling",
+      {
+        recordedAt: `2026-09-01T00:00:00.${"9".repeat(
+          MAX_DASHBOARD_RECORDED_AT_LENGTH - "2026-09-01T00:00:00.Z".length + 1,
+        )}Z`,
+      },
+    ],
+    [
+      "a question.text over its ceiling",
+      {
+        question: {
+          text: "a".repeat(MAX_DASHBOARD_QUESTION_LENGTH + 1),
+          scenarioLine: "x",
+        },
+      },
+    ],
+    [
+      "a question.scenarioLine over its ceiling",
+      {
+        question: {
+          text: "x",
+          scenarioLine: "a".repeat(MAX_DASHBOARD_SCENARIO_LINE_LENGTH + 1),
+        },
+      },
+    ],
+    [
+      "an answer over its ceiling",
+      { answer: "a".repeat(MAX_DASHBOARD_ANSWER_LENGTH + 1) },
+    ],
+    [
+      "a comment over its ceiling",
+      {
+        comments: {
+          clarity: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH + 1),
+          accuracy: "x",
+          vocabulary: "x",
+          appropriateness: "x",
+        },
+      },
+    ],
+    [
+      "a rubricVersion over its ceiling",
+      { rubricVersion: "a".repeat(MAX_DASHBOARD_RUBRIC_VERSION_LENGTH + 1) },
+    ],
+  ])("rejects a record with %s", (_case, overrides) => {
+    expect(
+      dashboardRequestSchema.safeParse({ records: [dashboardRecord(overrides)] })
+        .success,
+    ).toBe(false);
   });
 });
 

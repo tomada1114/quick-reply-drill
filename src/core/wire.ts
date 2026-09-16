@@ -171,29 +171,28 @@ export type ScoreRequest = z.infer<typeof scoreRequestSchema>;
 /** The answer body {@link scoreResponseSchema} describes. */
 export type ScoreResponse = z.infer<typeof scoreResponseSchema>;
 
-/** The most records one `POST /api/dashboard` call may summarise. */
-export const MAX_DASHBOARD_RECORDS = 10;
-/** A `DrillRecord`, trimmed to what the dashboard's trend paragraph is written from. */
-export const dashboardRecordSchema = z.object({
-  recordedAt: z.string(),
-  question: z.object({ text: z.string(), scenarioLine: z.string() }),
-  answer: z.string(),
-  scores: z.record(z.enum(ITEM_IDS), z.literal([...SCORE_LEVELS])),
-  comments: scoreCommentsSchema,
-  rubricVersion: z.string(),
-});
-/** One record as {@link dashboardRequestSchema} accepts it. */
-export type DashboardRecord = z.infer<typeof dashboardRecordSchema>;
-/** Refused with 400 when the records mix `rubricVersion`, which the client filters to one before sending. */
-export const dashboardRequestSchema = z
-  .object({ records: z.array(dashboardRecordSchema).min(1).max(MAX_DASHBOARD_RECORDS) })
-  .refine(
-    (value) => new Set(value.records.map((record) => record.rubricVersion)).size === 1,
-    { message: "Every record must share the same rubricVersion.", path: ["records"] },
-  );
-/** The JSON body `POST /api/dashboard` answers with. */
-export const dashboardResponseSchema = z.object({ summary: z.string() });
-/** The request body {@link dashboardRequestSchema} accepts. */
-export type DashboardRequest = z.infer<typeof dashboardRequestSchema>;
-/** The answer body {@link dashboardResponseSchema} describes. */
-export type DashboardResponse = z.infer<typeof dashboardResponseSchema>;
+/**
+ * `POST /api/dashboard`'s wire contract.
+ *
+ * @remarks
+ * Declared in `src/core/wire-dashboard.ts`, a separate module, and re-exported
+ * here under this module's name: this endpoint's own per-field ceilings would
+ * have pushed this file over `eslint.config.mjs`'s 200-line `max-lines`
+ * budget, and `writing-typescript` calls a module that outgrows that budget
+ * "a module doing more than one thing" — split it rather than raise the
+ * number. A caller still writes `from "../../core/wire"` either way.
+ */
+export {
+  dashboardRequestSchema,
+  dashboardResponseSchema,
+  MAX_DASHBOARD_ANSWER_LENGTH,
+  MAX_DASHBOARD_COMMENT_LENGTH,
+  MAX_DASHBOARD_QUESTION_LENGTH,
+  MAX_DASHBOARD_RECORDED_AT_LENGTH,
+  MAX_DASHBOARD_RECORDS,
+  MAX_DASHBOARD_RUBRIC_VERSION_LENGTH,
+  MAX_DASHBOARD_SCENARIO_LINE_LENGTH,
+  type DashboardRecord,
+  type DashboardRequest,
+  type DashboardResponse,
+} from "./wire-dashboard";
