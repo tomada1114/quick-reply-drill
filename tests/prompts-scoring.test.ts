@@ -356,6 +356,38 @@ describe("truncateGraderProse", () => {
     expect(truncateGraderProse(output)).toStrictEqual(output);
   });
 
+  it("drops the high half of a surrogate pair the budget would otherwise split", () => {
+    // "🙂" is two UTF-16 units; placed at index 299 it straddles the cut at 300.
+    const straddling = `${"a".repeat(MAX_GRADER_PROSE_LENGTH - 1)}🙂tail`;
+    const output = scoringOutput(straddling, straddling);
+
+    const truncated = truncateGraderProse(output);
+
+    for (const id of ITEM_IDS) {
+      expect(truncated.items[id].rationale).toBe(
+        "a".repeat(MAX_GRADER_PROSE_LENGTH - 1),
+      );
+    }
+    for (const criterion of CRITERIA) {
+      expect(truncated.comments[criterion.id]).toBe(
+        "a".repeat(MAX_GRADER_PROSE_LENGTH - 1),
+      );
+    }
+  });
+
+  it("keeps a whole surrogate pair that ends exactly at the budget", () => {
+    const fitting = `${"a".repeat(MAX_GRADER_PROSE_LENGTH - 2)}🙂tail`;
+
+    expect(truncateGraderProse(scoringOutput(fitting, fitting)).comments).toStrictEqual(
+      Object.fromEntries(
+        CRITERIA.map((criterion) => [
+          criterion.id,
+          `${"a".repeat(MAX_GRADER_PROSE_LENGTH - 2)}🙂`,
+        ]),
+      ),
+    );
+  });
+
   it("never touches modelReply, which carries no ceiling", () => {
     const overLong = "a".repeat(MAX_GRADER_PROSE_LENGTH + 50);
     const output = scoringOutput("Short.", "Short.", overLong);
