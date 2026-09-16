@@ -9,17 +9,6 @@ import {
 } from "../src/core/records";
 import { ITEM_IDS, type ItemId, type Score } from "../src/core/rubric";
 
-/**
- * The ceiling a stored rationale or comment is held to, written out rather
- * than imported.
- *
- * @remarks
- * Importing `MAX_DASHBOARD_COMMENT_LENGTH` would make the cases below agree
- * with the schema by construction; see `tests/wire.test.ts` for the same
- * reasoning applied to the wire schemas this one shares the ceiling with.
- */
-const MAX_COMMENT_LENGTH = 300;
-
 /** Every item mapped to the same score, keyed by {@link ITEM_IDS}. */
 function makeScores(value: Score = 3): Record<ItemId, Score> {
   return Object.fromEntries(ITEM_IDS.map((id) => [id, value])) as Record<ItemId, Score>;
@@ -136,50 +125,6 @@ describe("drillRecordSchema", () => {
   it("keeps scores and rationales keyed exactly by ItemId", () => {
     expectTypeOf<DrillRecord["scores"]>().toEqualTypeOf<Record<ItemId, Score>>();
     expectTypeOf<DrillRecord["rationales"]>().toEqualTypeOf<Record<ItemId, string>>();
-  });
-
-  // The grader's own fields, stored verbatim: bounding them is what keeps one
-  // over-verbose reply from bloating `localStorage`, and what keeps a record
-  // this store already holds inside what `POST /api/dashboard` will accept.
-  it("accepts a rationale and a comment exactly at MAX_COMMENT_LENGTH", () => {
-    const record = makeRecord({
-      rationales: {
-        ...makeRationales(),
-        answersQuestion: "a".repeat(MAX_COMMENT_LENGTH),
-      },
-      comments: {
-        clarity: "a".repeat(MAX_COMMENT_LENGTH),
-        accuracy: "x",
-        vocabulary: "x",
-        appropriateness: "x",
-      },
-    });
-
-    expect(drillRecordSchema.safeParse(record).success).toBe(true);
-  });
-
-  it("rejects a rationale one character over MAX_COMMENT_LENGTH", () => {
-    const record = makeRecord({
-      rationales: {
-        ...makeRationales(),
-        answersQuestion: "a".repeat(MAX_COMMENT_LENGTH + 1),
-      },
-    });
-
-    expect(drillRecordSchema.safeParse(record).success).toBe(false);
-  });
-
-  it("rejects a comment one character over MAX_COMMENT_LENGTH", () => {
-    const record = makeRecord({
-      comments: {
-        clarity: "a".repeat(MAX_COMMENT_LENGTH + 1),
-        accuracy: "x",
-        vocabulary: "x",
-        appropriateness: "x",
-      },
-    });
-
-    expect(drillRecordSchema.safeParse(record).success).toBe(false);
   });
 });
 

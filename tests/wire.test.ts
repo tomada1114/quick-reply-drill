@@ -219,40 +219,6 @@ describe("the POST /api/score answer body", () => {
     body.items["grammar"] = { rationale: "Concrete reason.", score: 6 };
     expect(scoreResponseSchema.safeParse(body).success).toBe(false);
   });
-
-  // The grader's own output, not caller input — but stored verbatim in a
-  // `DrillRecord`, so an over-long field is bound to the same ceiling
-  // `dashboardRecordSchema` holds a caller's comment to, and a shortfall here
-  // is what a real port maps to `ERR_LLM_INVALID_OUTPUT` rather than storing.
-  it("accepts a rationale and a comment exactly at MAX_DASHBOARD_COMMENT_LENGTH", () => {
-    const body = scoreAnswerBody() as {
-      items: Record<string, { rationale: string; score: number }>;
-      comments: Record<string, string>;
-    };
-    body.items["grammar"] = {
-      rationale: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH),
-      score: 4,
-    };
-    body.comments["clarity"] = "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH);
-    expect(scoreResponseSchema.safeParse(body).success).toBe(true);
-  });
-
-  it("rejects a rationale one character over MAX_DASHBOARD_COMMENT_LENGTH", () => {
-    const body = scoreAnswerBody() as {
-      items: Record<string, { rationale: string; score: number }>;
-    };
-    body.items["grammar"] = {
-      rationale: "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH + 1),
-      score: 4,
-    };
-    expect(scoreResponseSchema.safeParse(body).success).toBe(false);
-  });
-
-  it("rejects a comment one character over MAX_DASHBOARD_COMMENT_LENGTH", () => {
-    const body = scoreAnswerBody() as { comments: Record<string, string> };
-    body.comments["clarity"] = "a".repeat(MAX_DASHBOARD_COMMENT_LENGTH + 1);
-    expect(scoreResponseSchema.safeParse(body).success).toBe(false);
-  });
 });
 
 // The issue this closes: a stored `DrillRecord`'s comments come straight from

@@ -7,7 +7,6 @@ import {
   type CriterionId,
   type ItemId,
 } from "./rubric";
-import { MAX_DASHBOARD_COMMENT_LENGTH } from "./wire-dashboard";
 
 /**
  * The HTTP bodies this application's own endpoints speak.
@@ -118,8 +117,9 @@ export const scoreRequestSchema = z.object({
 
 /** One item's verdict: the reasoning first, then the level it justifies. */
 const scoreItem = z.object({
-  // Shares `MAX_DASHBOARD_COMMENT_LENGTH` with `comments`: both are short grader prose a stored `DrillRecord` must keep bounded.
-  rationale: z.string().max(MAX_DASHBOARD_COMMENT_LENGTH),
+  // No `.max()` — `maxLength` is unguaranteed under strict mode, see `score`
+  // below. Bounded by truncation instead, in `scoring.ts`'s `MAX_GRADER_PROSE_LENGTH`.
+  rationale: z.string(),
   // `z.literal` of the six levels converts to a numeric `enum`, which the
   // provider's strict JSON Schema mode accepts. A `.min()`/`.max()` pair would
   // rely on `minimum`/`maximum`, which strict mode does not guarantee.
@@ -142,14 +142,12 @@ export const scoreItemsSchema = z.object(
   >,
 );
 
-/** One comment per criterion, keyed by {@link CRITERIA} in rubric order, bounded by {@link MAX_DASHBOARD_COMMENT_LENGTH} so it is always one `POST /api/dashboard` call accepts back. */
+/** One comment per criterion, keyed by {@link CRITERIA} in rubric order. */
 export const scoreCommentsSchema = z.object(
-  Object.fromEntries(
-    CRITERIA.map((criterion) => [
-      criterion.id,
-      z.string().max(MAX_DASHBOARD_COMMENT_LENGTH),
-    ]),
-  ) as Record<CriterionId, z.ZodString>,
+  Object.fromEntries(CRITERIA.map((criterion) => [criterion.id, z.string()])) as Record<
+    CriterionId,
+    z.ZodString
+  >,
 );
 
 /**
@@ -176,10 +174,15 @@ export type ScoreRequest = z.infer<typeof scoreRequestSchema>;
 export type ScoreResponse = z.infer<typeof scoreResponseSchema>;
 
 /**
- * `POST /api/dashboard`'s wire contract, declared in `wire-dashboard.ts`
- * because its own per-field ceilings would have pushed this file over
- * `eslint.config.mjs`'s 200-line budget, and re-exported here so a caller
- * still writes `from "../../core/wire"` either way.
+ * `POST /api/dashboard`'s wire contract.
+ *
+ * @remarks
+ * Declared in `src/core/wire-dashboard.ts`, a separate module, and re-exported
+ * here under this module's name: this endpoint's own per-field ceilings would
+ * have pushed this file over `eslint.config.mjs`'s 200-line `max-lines`
+ * budget, and `writing-typescript` calls a module that outgrows that budget
+ * "a module doing more than one thing" — split it rather than raise the
+ * number. A caller still writes `from "../../core/wire"` either way.
  */
 export {
   dashboardRequestSchema,

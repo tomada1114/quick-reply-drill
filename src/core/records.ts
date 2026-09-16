@@ -1,7 +1,6 @@
 import * as z from "zod";
 
 import { ITEM_IDS, SCORE_LEVELS } from "./rubric";
-import { MAX_DASHBOARD_COMMENT_LENGTH } from "./wire-dashboard";
 
 /**
  * The version of the `localStorage` envelope this module reads and writes.
@@ -80,21 +79,14 @@ export const drillRecordSchema = z.object({
   elapsedMs: z.int().min(0),
   /** Every item's raw score, keyed by {@link ItemId}. */
   scores: exactByItemId(scoreSchema),
-  /**
-   * Every item's rationale, keyed by {@link ItemId}.
-   *
-   * @remarks
-   * Bounded by {@link MAX_DASHBOARD_COMMENT_LENGTH}, the grader's own output
-   * ceiling in `src/core/wire.ts` — see that module for why it shares the
-   * constant `dashboardRecordSchema` holds a caller's comment to.
-   */
-  rationales: exactByItemId(z.string().max(MAX_DASHBOARD_COMMENT_LENGTH)),
-  /** One short comment per criterion, bounded the same way `rationales` is. */
+  /** Every item's rationale, keyed by {@link ItemId}. */
+  rationales: exactByItemId(z.string()),
+  /** One short comment per criterion. */
   comments: z.object({
-    clarity: z.string().max(MAX_DASHBOARD_COMMENT_LENGTH),
-    accuracy: z.string().max(MAX_DASHBOARD_COMMENT_LENGTH),
-    vocabulary: z.string().max(MAX_DASHBOARD_COMMENT_LENGTH),
-    appropriateness: z.string().max(MAX_DASHBOARD_COMMENT_LENGTH),
+    clarity: z.string(),
+    accuracy: z.string(),
+    vocabulary: z.string(),
+    appropriateness: z.string(),
   }),
   /** The learner's reply, corrected and made natural. */
   modelReply: z.string(),

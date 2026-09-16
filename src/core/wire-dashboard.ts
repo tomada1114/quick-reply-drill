@@ -13,13 +13,13 @@ import { CRITERIA, ITEM_IDS, SCORE_LEVELS, type CriterionId } from "./rubric";
  * caller still writes `from "../../core/wire"` regardless of which file
  * actually declares it.
  *
- * `comments` below is deliberately its own schema rather than a reuse of
- * `wire.ts`'s `scoreCommentsSchema`: that one types the grader's own output
- * and this one types what a caller sends back, two different trust
- * boundaries even though both now hold every comment to
- * {@link MAX_DASHBOARD_COMMENT_LENGTH} — the one constant, declared here,
- * that keeps a stored comment and a dashboard-request comment from being two
- * ceilings that merely happen to agree.
+ * `comments` below is deliberately its own bounded schema rather than a reuse
+ * of `wire.ts`'s `scoreCommentsSchema`: that schema types the grader's own
+ * output, which this application never bounds by length in the schema — a
+ * ceiling there would land as `maxLength` in the JSON Schema the grader's
+ * structured-output request is converted to, which strict mode does not
+ * guarantee — while a dashboard record's `comments` arrives from a caller
+ * like every other field here and has to be bounded the same way they are.
  */
 
 /** The most records one `POST /api/dashboard` call may summarise. */
