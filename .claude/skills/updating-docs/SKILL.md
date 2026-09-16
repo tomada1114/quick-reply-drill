@@ -45,9 +45,9 @@ answer it rather than deferring back:
 Each surface has one job; do not blur them, and do not let one grow a second copy of
 another's content.
 
-- `README.md` — the tour: what this template is, how to run it, and where copying it
-  into a new app starts. It links to `AGENTS.md` and `CONTRIBUTING.md` instead of
-  repeating them, so it must not grow a second command index or a second rule list.
+- `README.md` — the tour: what this app is and how to run it. It links to `AGENTS.md`
+  and `CONTRIBUTING.md` instead of repeating them, so it must not grow a second command
+  index or a second rule list.
 - `AGENTS.md` — the agent-facing guide: the architecture, the zone boundaries, the Quick
   reference command index, the rules, and the Skills routing table. A changed boundary,
   gate rule, or `pnpm` command lands here.
