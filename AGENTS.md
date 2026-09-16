@@ -191,7 +191,6 @@ names its own boundary with its neighbours.
 | `merge-dependabot`      | landing open Dependabot or Renovate pull requests                                                                                   |
 | `updating-docs`         | `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, or whether a change owes a doc at all                                                  |
 | `triaging-issues`       | filing, labelling, or ranking a GitHub issue                                                                                        |
-| `starting-an-app`       | turning this template into a new app: the rename and the AI layer                                                                   |
 
 ## Security and human approval
 

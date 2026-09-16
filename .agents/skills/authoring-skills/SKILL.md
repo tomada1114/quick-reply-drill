@@ -99,8 +99,7 @@ the example is then left with a rule that still reads, instead of a paragraph th
 to author a replacement for out of code they have not written yet — which is exactly
 where that reader stands, because adapting the template is decided before any module of
 their own exists. Nothing enforces this; separating the rule from its illustration keeps
-that adaptation local. **BACKGROUND:** `starting-an-app`, which owns the template
-adaptation procedure.
+that adaptation local.
 
 ## Size and structure
 
