@@ -2,6 +2,7 @@ import * as z from "zod";
 
 import { CRITERIA, ITEM_IDS } from "../../core/rubric";
 import type { DashboardRecord } from "../../core/wire";
+import { fenceBlock, realRandomUUID, type RandomUUID } from "./fence";
 import { PROMPT_OUTPUT_LANGUAGE, type PromptRequest } from "./request";
 
 /**
@@ -56,16 +57,19 @@ function commentLine(record: DashboardRecord): string {
  * could have anticipated — see {@link buildDashboardRequest}.
  */
 function recordBlock(record: DashboardRecord, token: string, index: number): string {
-  return [
-    `<<<RECORD ${String(index)} ${token}>>>`,
-    `Recorded at: ${record.recordedAt}`,
-    `Scenario: ${record.question.scenarioLine}`,
-    `Question: ${record.question.text}`,
-    `Reply: ${record.answer}`,
-    `Scores: ${scoreLine(record)}`,
-    `Comments: ${commentLine(record)}`,
-    `<<<END ${String(index)} ${token}>>>`,
-  ].join("\n");
+  return fenceBlock(
+    "RECORD",
+    token,
+    [
+      `Recorded at: ${record.recordedAt}`,
+      `Scenario: ${record.question.scenarioLine}`,
+      `Question: ${record.question.text}`,
+      `Reply: ${record.answer}`,
+      `Scores: ${scoreLine(record)}`,
+      `Comments: ${commentLine(record)}`,
+    ].join("\n"),
+    index,
+  );
 }
 
 /**
@@ -95,7 +99,7 @@ function recordBlock(record: DashboardRecord, token: string, index: number): str
  */
 export function buildDashboardRequest(
   records: readonly DashboardRecord[],
-  randomUUID: () => string = (): string => crypto.randomUUID(),
+  randomUUID: RandomUUID = realRandomUUID,
 ): PromptRequest<typeof dashboardOutputSchema> {
   const token = randomUUID();
   const newestFirst = [...records].sort(
