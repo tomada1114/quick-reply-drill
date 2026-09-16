@@ -5,9 +5,9 @@ description: >
   canvas, IBM Plex Mono figures, hairline rules, one charcoal action — its Tailwind v4
   @theme tokens, and the layout of the drill, feedback, and dashboard screens. Use when
   building or restyling a component under src/, choosing a color, type size, radius,
-  spacing, or motion, adding a shadcn/ui or AI Elements component, styling the
-  countdown, the score table, or the model answer, deciding whether a UI change fits the
-  system, or researching a screen that has no precedent here yet.
+  spacing, or motion, adding a shadcn/ui component, styling the countdown, the score
+  table, or the model answer, deciding whether a UI change fits the system, or
+  researching a screen that has no precedent here yet.
 ---
 
 # Designing UI
@@ -63,9 +63,9 @@ Ledger for the choices that a reader would otherwise have to take on trust:
 
 ## Foundation
 
-Tailwind v4, shadcn/ui, and Vercel AI Elements. Tokens are declared once in the `@theme`
-block of the global stylesheet and consumed as utilities; a component never carries a
-raw hex, a one-off `px` type size, or an arbitrary-value color.
+Tailwind v4 and shadcn/ui. Tokens are declared once in the `@theme` block of the global
+stylesheet and consumed as utilities; a component never carries a raw hex, a one-off
+`px` type size, or an arbitrary-value color.
 
 - Where a copied component lands, and how it imports: `components.json` points every
   shadcn alias inside one zone — `@/components` (components), `@/components/ui` (ui),
@@ -78,13 +78,13 @@ raw hex, a one-off `px` type size, or an arbitrary-value color.
   holds why). `src/components/` may name `src/core/`, the framework and the UI
   libraries, and nothing else under `src/` — AGENTS.md's Architecture section owns that
   edge, and `eslint.config.mjs` plus `tests/boundaries.test.ts` enforce it.
-- shadcn/ui and AI Elements components are copied into this repository, so they are
-  ordinary source files to edit, not a dependency to configure around. Restyle the copy
-  to the tokens on the way in — an untouched default carries its own neutral palette and
-  radius, which is exactly the drift this skill exists to prevent.
-- Prefer an existing shadcn/ui or AI Elements component over a hand-rolled one; that is
-  what "use the libraries" buys. The exception is anything on the lock's reject list,
-  which is not made acceptable by shipping inside a library component.
+- shadcn/ui components are copied into this repository, so they are ordinary source
+  files to edit, not a dependency to configure around. Restyle the copy to the tokens on
+  the way in — an untouched default carries its own neutral palette and radius, which is
+  exactly the drift this skill exists to prevent.
+- Prefer an existing shadcn/ui component over a hand-rolled one; that is what "use the
+  libraries" buys. The exception is anything on the lock's reject list, which is not
+  made acceptable by shipping inside a library component.
 - Every token value, the `@theme` block, and the component recipes are in
   [references/tokens.md](references/tokens.md). Read that file before writing CSS.
 
