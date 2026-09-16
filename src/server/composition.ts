@@ -1,9 +1,9 @@
 import "server-only";
 
-import { createFakeLlmPort, createOpenAiLlmPort, type LlmPort } from "../ai/index";
+import { createOpenAiLlmPort, type LlmPort } from "../ai/index";
 import { readServerEnv } from "./env";
-import { createAskHandler } from "./handlers/ask";
 import { createQuestionsHandler } from "./handlers/questions";
+import { createScoreHandler } from "./handlers/score";
 import { LLM_PROFILES, type LlmUse } from "./llm-profiles";
 
 // Read once, at module load, so a malformed environment stops the server as it
@@ -47,23 +47,18 @@ const ports: Record<LlmUse, LlmPort> = {
   dashboard: openAiPortFor("dashboard"),
 };
 
-/**
- * The fake port `POST /api/ask` still answers from.
- *
- * @remarks
- * `/api/ask` is the template's demonstration endpoint and is deleted with the
- * scoring endpoint that replaces it. Leaving it on the fake until then keeps
- * it answering with no credential configured, which is what it exists to show.
- */
-const fakeLlm = createFakeLlmPort({
-  response: {
-    answer:
-      "This answer comes from the fake LLM adapter, so the endpoint works with no API key. Swap the adapter in src/server/composition.ts to reach a real model.",
-  },
-});
-
-/** The handler `src/app/api/ask/route.ts` publishes as its `POST` export. */
-export const askHandler = createAskHandler({ llm: fakeLlm });
-
 /** The handler `src/app/api/questions/route.ts` publishes as its `POST` export. */
 export const questionsHandler = createQuestionsHandler({ llm: ports.questions });
+
+/**
+ * The handler `src/app/api/score/route.ts` publishes as its `POST` export.
+ *
+ * @remarks
+ * The profile is passed alongside the port it built, because the answer
+ * records which model graded the reply: reading it from the same table that
+ * configured the port is what keeps the two from disagreeing.
+ */
+export const scoreHandler = createScoreHandler({
+  llm: ports.scoring,
+  model: LLM_PROFILES.scoring,
+});

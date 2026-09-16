@@ -34,15 +34,13 @@ const serverEnvShape = z.object({
    * Credential for the OpenAI models this application will call.
    *
    * @remarks
-   * Optional because `src/server/composition.ts` wires the fake adapter, which
-   * needs no credential at all — that is what keeps `pnpm dev` answering a
-   * request with nothing configured, and what keeps every test off the
-   * network. The name is declared here ahead of the adapter that will consume
-   * it so a developer's `.env` is valid before that adapter exists; a
-   * deployment that switches to a billed adapter supplies this variable, and
-   * that adapter reports a missing or rejected key as the port's
-   * `ERR_LLM_AUTH` on the request that needed it — a failure a caller can see
-   * and act on, which a server that refuses to boot is not.
+   * Optional although every endpoint needs it, so that a missing key is a
+   * failure the request that needed it reports rather than one that stops the
+   * process from starting: the adapter answers `ERR_LLM_AUTH` without opening
+   * a socket, which is a failure a caller can see and act on, and which keeps
+   * `pnpm dev`, the smoke suite and every test off the network with nothing
+   * configured. A server that refuses to boot tells nobody which name was
+   * absent.
    *
    * Its presence is validated here but its use belongs to the adapter that
    * receives the environment from the composition root.

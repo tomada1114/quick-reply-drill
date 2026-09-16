@@ -32,16 +32,17 @@ coverage floors (`placing-tests`); compile-time assertions with `expectTypeOf`
 There is no single entry point to test this application through — each zone has its own
 surface, and that surface is the seam. The four this repository ships:
 
-- **A handler factory, driven with a real `Request`.** `createAskHandler` in
-  `src/server/handlers/ask.ts` takes its port as an argument, so a test builds a
-  `new Request("http://localhost/api/ask", { method: "POST", body })` and asserts the
+- **A handler factory, driven with a real `Request`.** `createScoreHandler` in
+  `src/server/handlers/score.ts` takes its port as an argument, so a test builds a
+  `new Request("http://localhost/api/score", { method: "POST", body })` and asserts the
   `Response` it gets back — status, `content-type`, and the parsed JSON body. Nothing is
   mocked: the dependency is injected because the factory asks for it.
-  `tests/server-handler.test.ts` is the model, down to the recording wrapper it uses to
+  `tests/server-score.test.ts` is the model, down to the recording wrapper it uses to
   assert what the handler passed the port without counting calls.
 - **A Route Handler module.** `src/app/api/<name>/route.ts` re-exports a handler
   composed elsewhere, so the only thing left to assert about the file itself is that
-  identity — `expect(POST).toBe(askHandler)`. Everything else is a test of the handler.
+  identity — `expect(POST).toBe(scoreHandler)`. Everything else is a test of the
+  handler.
 - **A synchronous Server Component**, rendered under jsdom through Testing Library.
   `tests/home-page.test.tsx` is the model, and it queries by role and accessible name
   rather than by class or test id. The page under test carries no `"use client"` —
