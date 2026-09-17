@@ -36,7 +36,7 @@ Preserve:           white canvas with no tinted sections; IBM Plex Mono carrying
                     4px controls / 8px cards; one contained centered column.
 Borrow only:        imgs.so — the charcoal #1c2024 filled primary button, the #f5f5f5
                     inset input fill, and mono micro-labels at 10-12px in caps.
-Role rules:         the charcoal is the primary action and nothing else; amber #9a5421 is
+Role rules:         the charcoal is the primary action and nothing else; red #c0362c is
                     a status indicator only (the last ten seconds, the forced submit);
                     SST's syntax colors stay out of the UI entirely.
 Media strategy:     no photography, no illustration, no mascot. The typeset page is the
@@ -56,7 +56,7 @@ Ledger for the choices that a reader would otherwise have to take on trust:
 | White canvas, hairline rules, flat surfaces | SST style (primary)              | The product is a graded answer sheet; paper is the honest metaphor and the calmest ground            |
 | Mono for question, timer, and every score   | SST type roles                   | Figures must be scannable in the two seconds between reps, and mono digits do not reflow             |
 | Charcoal filled primary action              | imgs.so component role           | One filled control per screen makes "send" unmissable without spending a hue on it                   |
-| Amber reserved for the last ten seconds     | imgs.so status-badge role        | Urgency is a status, not a brand color; borrowing the badge role keeps the page monochrome           |
+| Red reserved for the last ten seconds       | imgs.so status-badge role        | Urgency is a status, not a brand color; borrowing the badge role keeps the page monochrome           |
 | Score deltas are monochrome, sign + glyph   | anti-slop rule, no source color  | Green/red score chips are the genre's default and would be the loudest thing on the page             |
 | Card: timer top-left, action bottom-right   | Duolingo English Test timed quiz | The one timed-answer pattern with real usage evidence; reps read left-to-right, top-down             |
 | No score ring for the total                 | rejected (Promova results card)  | A ring reads as a badge; eight sub-scores need a table, and the total belongs in the same typography |
@@ -130,7 +130,7 @@ a measure of 65-75 characters, with the button that requests it directly above.
 - Type: Rubik for prose, labels, and buttons; IBM Plex Mono for the question, the
   countdown, every score, table headers, and micro-labels. No third family, no italics,
   no decorative word swap in a heading.
-- Color carries meaning exactly once: the countdown turning amber under ten seconds.
+- Color carries meaning exactly once: the countdown turning red under ten seconds.
   Because that is a single signal on a monochrome page, it must also change form — the
   figure gains weight and the card's top rule thickens — so the state survives a
   colorblind reader and a grayscale screenshot.

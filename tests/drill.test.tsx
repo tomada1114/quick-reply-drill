@@ -226,6 +226,22 @@ describe("Drill", () => {
     expect(screen.getByText("Question number 1?")).toBeInTheDocument();
   });
 
+  it("switches the countdown to the status color once fewer than ten seconds remain", async () => {
+    stubFetch();
+    await renderDrill(new MapStorage());
+
+    clickStart();
+    expect(screen.getByText("1:00")).not.toHaveClass("text-status");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(51_000);
+    });
+
+    const countdown = screen.getByText("0:09");
+    expect(countdown).toHaveClass("text-status");
+    expect(countdown.closest(".border-t-status")).not.toBeNull();
+  });
+
   it("shows a pointer cursor on an enabled Send control", async () => {
     stubFetch();
     await renderDrill(new MapStorage());
