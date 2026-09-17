@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { fetchDashboardSummary } from "@/components/shared/api";
+import { Caption } from "@/components/shared/caption";
 import { describeApiError } from "@/components/shared/format";
 import { LoadingIndicator } from "@/components/shared/loading-indicator";
 import { Button } from "@/components/ui/button";
@@ -72,9 +73,7 @@ export function SummaryPanel({ records }: SummaryPanelProps): ReactElement {
           <LoadingIndicator label="Writing summary" />
         ) : null}
         {state.status === "error" ? (
-          <p className="mb-0 font-sans text-caption text-slate">
-            {describeApiError(state.error, "The summary did not load")}
-          </p>
+          <Caption>{describeApiError(state.error, "The summary did not load")}</Caption>
         ) : null}
       </div>
       {state.status === "done" ? (

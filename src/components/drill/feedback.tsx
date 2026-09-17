@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import type { DrillRecord } from "@/core/records";
 import { scoreDelta, totalScore } from "@/core/scoring";
+import { Caption } from "@/components/shared/caption";
 import { DrillCard, DrillDivider } from "@/components/shared/card";
 
 import { CriterionDetails } from "./criterion-details";
@@ -70,9 +71,7 @@ export function Feedback({
         ) : null}
       </div>
       {saveError !== undefined ? (
-        <p className="font-sans text-caption text-slate">
-          This score was not saved to your local history.
-        </p>
+        <Caption>This score was not saved to your local history.</Caption>
       ) : null}
       <DrillDivider />
       <ScoreRadar scores={record.scores} />
