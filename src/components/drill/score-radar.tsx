@@ -21,15 +21,31 @@ interface ScoreRadarProps {
 interface AxisTickProps {
   readonly x?: number | string;
   readonly y?: number | string;
+  readonly cy?: number | string;
   readonly textAnchor?: string;
   readonly index?: number;
   readonly axes: readonly RadarAxis[];
+}
+
+/**
+ * `dy` for the two lines, in px: stacked away from the centre, so an axis
+ * label never sits on the dot at the end of its own spoke.
+ */
+function lineOffsets(y: number, cy: number): readonly [number, number] {
+  if (y < cy - 1) {
+    return [-14, 12];
+  }
+  if (y > cy + 1) {
+    return [12, 14];
+  }
+  return [-3, 14];
 }
 
 /** Two lines per axis: the criterion micro-label in slate, the item in ink. */
 function AxisTick({
   x,
   y,
+  cy,
   textAnchor,
   index,
   axes,
@@ -39,18 +55,19 @@ function AxisTick({
     return null;
   }
   const anchor = textAnchor === "start" || textAnchor === "end" ? textAnchor : "middle";
+  const [groupDy, labelDy] = lineOffsets(Number(y), Number(cy));
   return (
     <text x={x} y={y} textAnchor={anchor} data-slot="radar-axis" className="font-mono">
       <tspan
         x={x}
-        dy="-0.2em"
+        dy={groupDy}
         fontSize={11}
         letterSpacing="0.08em"
         fill="var(--color-slate)"
       >
         {axis.group}
       </tspan>
-      <tspan x={x} dy="1.3em" fontSize={12} fill="var(--color-ink)">
+      <tspan x={x} dy={labelDy} fontSize={12} fill="var(--color-ink)">
         {axis.label}
       </tspan>
     </text>
@@ -71,7 +88,7 @@ export function ScoreRadar({ scores }: ScoreRadarProps): ReactElement {
   return (
     <div role="img" aria-label={describeRadar(scores)} className="w-full">
       <ChartContainer className="aspect-square max-h-[320px] w-full">
-        <RadarChart data={axes} outerRadius="62%" accessibilityLayer={false}>
+        <RadarChart data={axes} outerRadius="50%" accessibilityLayer={false}>
           <PolarGrid stroke="var(--color-rule)" />
           <PolarRadiusAxis
             domain={[0, 5]}

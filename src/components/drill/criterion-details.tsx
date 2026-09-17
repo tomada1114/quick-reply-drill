@@ -6,7 +6,7 @@ import { criterionScores } from "@/core/scoring";
 import { BODY_TEXT_CLASS_NAME } from "@/components/shared/format";
 
 const MONO_BODY_CLASS_NAME =
-  "font-mono text-[length:var(--text-body)] leading-[var(--text-body--line-height)] tracking-[var(--text-body--letter-spacing)] text-ink";
+  "font-mono text-[length:var(--text-body)] leading-[var(--text-body--line-height)] tracking-[var(--text-body--letter-spacing)] whitespace-nowrap text-ink";
 
 interface CriterionDetailsProps {
   readonly record: DrillRecord;

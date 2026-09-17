@@ -626,8 +626,8 @@ describe("Drill", () => {
       [...axis.querySelectorAll("tspan")].map((line) => line.textContent),
     );
     expect(axes).toEqual([
-      ["CONVERSATION", "Responds"],
-      ["CONVERSATION", "Keeps going"],
+      ["FLOW", "Responds"],
+      ["FLOW", "Keeps going"],
       ["ACCURACY", "Grammar"],
       ["ACCURACY", "Spelling"],
       ["VOCABULARY", "Word choice"],

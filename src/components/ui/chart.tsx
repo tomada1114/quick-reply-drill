@@ -34,7 +34,7 @@ function ChartContainer({
     <div
       data-slot="chart"
       className={cn(
-        "flex justify-center font-mono text-micro [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-rule [&_.recharts-surface]:outline-hidden",
+        "flex justify-center font-mono text-micro [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-rule [&_.recharts-surface]:overflow-visible [&_.recharts-surface]:outline-hidden",
         className,
       )}
       {...props}

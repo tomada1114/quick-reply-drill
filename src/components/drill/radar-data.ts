@@ -14,7 +14,7 @@ export interface RadarAxis {
 // phrasing"), which cannot sit around a radar at phone width. These are the
 // axis names only; the collapsed detail sections still show the full labels.
 const GROUP_LABELS = {
-  conversation: "CONVERSATION",
+  conversation: "FLOW",
   accuracy: "ACCURACY",
   vocabulary: "VOCABULARY",
   appropriateness: "FIT",
