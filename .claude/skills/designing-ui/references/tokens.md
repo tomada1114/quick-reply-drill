@@ -156,7 +156,17 @@ reply itself in Rubik at `--text-body-lg` and body color, above it the micro-lab
 
 **Sparkline.** Stroke in ink at 1.5px on a paper ground, no fill, no gridlines, no axis
 labels, no points except the latest one as a 3px ink dot. It is decoration with a job;
-if it needs a legend it has become a chart, and a chart is not in this system.
+if it needs a legend it has become a chart, and the score radar below is the only chart
+in this system.
+
+**Score radar.** The feedback screen's eight sub-scores, drawn with Recharts through the
+`ChartContainer` copy in `src/components/ui/chart.tsx`. Grid rings and spokes in rule,
+one ring per score level 0-5, no radius ticks. The score outline is ink at 1.5px with no
+fill and a 3px ink dot on each axis. Each axis label is two lines: the criterion's mono
+micro-label in slate caps above the item's short name in mono ink. No legend, no
+tooltip, no second series, no animation. The wrapper is one `role="img"` whose
+accessible name lists every sub-score by its full rubric label, so the drawing itself
+carries nothing a reader would otherwise miss.
 
 ## Anti-slop checklist for a finished screen
 

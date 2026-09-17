@@ -1,4 +1,11 @@
-import { act, createEvent, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Drill } from "../src/components/drill/drill";
@@ -195,6 +202,46 @@ function setNavigatorUserAgent(userAgent: string): () => void {
       delete (window.navigator as { userAgent?: string }).userAgent;
     }
   };
+}
+
+/**
+ * A sheet whose items all differ, so an axis or a row bound to the wrong item
+ * shows a wrong number, and whose comments name their criterion.
+ */
+function makeVariedScoreResponse(): ScoreResponse {
+  return makeScoreResponse({
+    items: {
+      respondsToPartner: { rationale: "Solid.", score: 5 },
+      keepsItGoing: { rationale: "Solid.", score: 2 },
+      grammar: { rationale: "Solid.", score: 4 },
+      spellingPunctuation: { rationale: "Solid.", score: 3 },
+      wordChoice: { rationale: "Solid.", score: 4 },
+      collocation: { rationale: "Solid.", score: 4 },
+      toneRegister: { rationale: "Solid.", score: 1 },
+      chatForm: { rationale: "Solid.", score: 5 },
+    },
+    comments: {
+      conversation: "Conversation comment.",
+      accuracy: "Accuracy comment.",
+      vocabulary: "Vocabulary comment.",
+      appropriateness: "Fit comment.",
+    },
+  });
+}
+
+/** The collapsible section whose summary names `label`. */
+function detailsSection(label: string): HTMLElement {
+  const section = screen.getByText(label).closest("details");
+  expect(section).toBeInstanceOf(HTMLDetailsElement);
+  return section as HTMLElement;
+}
+
+/** Starts a rep, sends a reply, and lets the stubbed score response land. */
+async function reachFeedback(): Promise<void> {
+  clickStart();
+  typeReply("Sure, I'm free then.");
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  await flush();
 }
 
 describe("Drill", () => {
@@ -579,6 +626,115 @@ describe("Drill", () => {
       "No reply was sent before the clock ran out.",
     );
   });
+
+  it("draws the eight sub-scores as a radar with one labeled axis per rubric item", async () => {
+    const { scoreMock } = stubFetch();
+    scoreMock.mockReturnValueOnce(jsonResponse(200, makeVariedScoreResponse()));
+    await renderDrill(new MapStorage());
+
+    await reachFeedback();
+
+    const radar = screen.getByRole("img", {
+      name:
+        "Sub-scores out of 5: Responds to the partner 5 of 5, Keeps it going 2 of 5, " +
+        "Grammar 4 of 5, Spelling and punctuation 3 of 5, Word choice 4 of 5, " +
+        "Collocation, no translated-sounding phrasing 4 of 5, " +
+        "Tone and politeness for the relationship 1 of 5, " +
+        "Length and shape for a chat reply 5 of 5.",
+    });
+    const axes = [...radar.querySelectorAll('[data-slot="radar-axis"]')].map((axis) =>
+      [...axis.querySelectorAll("tspan")].map((line) => line.textContent),
+    );
+    expect(axes).toEqual([
+      ["FLOW", "Responds"],
+      ["FLOW", "Keeps going"],
+      ["ACCURACY", "Grammar"],
+      ["ACCURACY", "Spelling"],
+      ["VOCABULARY", "Word choice"],
+      ["VOCABULARY", "Collocation"],
+      ["FIT", "Tone"],
+      ["FIT", "Chat form"],
+    ]);
+  });
+
+  it("starts every criterion's details collapsed", async () => {
+    const { scoreMock } = stubFetch();
+    scoreMock.mockReturnValueOnce(jsonResponse(200, makeVariedScoreResponse()));
+    await renderDrill(new MapStorage());
+
+    await reachFeedback();
+
+    for (const label of [
+      "Keeps the conversation going",
+      "Accuracy",
+      "Vocabulary and naturalness",
+      "Fit for the situation",
+    ]) {
+      expect(detailsSection(label)).not.toHaveAttribute("open");
+    }
+    const accuracy = within(detailsSection("Accuracy"));
+    expect(accuracy.getByText("Spelling and punctuation")).not.toBeVisible();
+    expect(accuracy.getByText("Accuracy comment.")).not.toBeVisible();
+  });
+
+  it.each([
+    [
+      "Keeps the conversation going",
+      "7 / 10",
+      [
+        ["Responds to the partner", "5 / 5"],
+        ["Keeps it going", "2 / 5"],
+      ],
+      "Conversation comment.",
+    ],
+    [
+      "Accuracy",
+      "7 / 10",
+      [
+        ["Grammar", "4 / 5"],
+        ["Spelling and punctuation", "3 / 5"],
+      ],
+      "Accuracy comment.",
+    ],
+    [
+      "Vocabulary and naturalness",
+      "8 / 10",
+      [
+        ["Word choice", "4 / 5"],
+        ["Collocation, no translated-sounding phrasing", "4 / 5"],
+      ],
+      "Vocabulary comment.",
+    ],
+    [
+      "Fit for the situation",
+      "6 / 10",
+      [
+        ["Tone and politeness for the relationship", "1 / 5"],
+        ["Length and shape for a chat reply", "5 / 5"],
+      ],
+      "Fit comment.",
+    ],
+  ] as const)(
+    "opens %s to show its sub-scores and comment",
+    async (label, subtotal, items, comment) => {
+      const { scoreMock } = stubFetch();
+      scoreMock.mockReturnValueOnce(jsonResponse(200, makeVariedScoreResponse()));
+      await renderDrill(new MapStorage());
+      await reachFeedback();
+
+      const section = detailsSection(label);
+      expect(section.querySelector("summary")).toHaveTextContent(subtotal);
+      fireEvent.click(within(section).getByText(label));
+
+      expect(section).toHaveAttribute("open");
+      for (const [itemLabel, score] of items) {
+        const row = within(section).getByText(itemLabel);
+        expect(row).toBeVisible();
+        expect(row.parentElement).toHaveTextContent(score);
+      }
+      expect(within(section).getByText(comment)).toBeVisible();
+    },
+  );
 
   it("shows the second question on Next without a network round trip", async () => {
     const { questionsMock, scoreMock } = stubFetch();
