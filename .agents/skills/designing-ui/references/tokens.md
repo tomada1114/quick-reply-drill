@@ -27,19 +27,20 @@ thing separating two interactive regions — it separates, it does not signal.
 `--color-paper` when it moved from the muted amber `#9a5421` to the clear red `#c0362c`
 in #64: `#c0362c` on `#ffffff` is 5.52:1, clearing the 4.5:1 floor with headroom.
 
-No success green and no error red exist in this system. A score that fell is a minus
-sign and a `▼` glyph in ink, not a red chip; a validation failure is body text under the
-field plus the field's border darkening to ink.
+The status red is the countdown/forced-submit status signal only. There is still no
+success green, and no red for a score drop or a validation error: a score that fell is a
+minus sign and a `▼` glyph in ink, not a red chip; a validation failure is body text
+under the field plus the field's border darkening to ink.
 
 ## Typography
 
 Two families, loaded through `next/font/google`, with `display: "swap"` and the subset
 this app actually needs.
 
-| Token         | Family        | Weights  | Carries                                                                |
-| ------------- | ------------- | -------- | ---------------------------------------------------------------------- |
-| `--font-sans` | Rubik         | 400, 500 | Prose, comments, labels, buttons, the dashboard paragraph.             |
-| `--font-mono` | IBM Plex Mono | 400, 600 | The question, the countdown, all figures, table headers, micro-labels. |
+| Token         | Family        | Weights       | Carries                                                                                                                 |
+| ------------- | ------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `--font-sans` | Rubik         | 400, 500      | Prose, comments, labels, buttons, the dashboard paragraph.                                                              |
+| `--font-mono` | IBM Plex Mono | 400, 600, 700 | The question, the countdown, all figures, table headers, micro-labels. 700 is the urgent/expired countdown weight only. |
 
 Scale — sizes are fixed tokens, not ad-hoc utilities:
 
