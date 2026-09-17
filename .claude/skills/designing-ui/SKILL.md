@@ -40,7 +40,8 @@ Role rules:         the charcoal is the primary action and nothing else; amber #
                     a status indicator only (the last ten seconds, the forced submit);
                     SST's syntax colors stay out of the UI entirely.
 Media strategy:     no photography, no illustration, no mascot. The typeset page is the
-                    image. The one graphic allowed is a monochrome sparkline.
+                    image. Two graphics are allowed, both monochrome: the dashboard's
+                    sparkline and the feedback screen's radar of the eight sub-scores.
 Reject:             score rings and donuts, progress bars as decoration, gradients,
                     indigo/violet brand accents, colored "good/bad" score chips,
                     streak flames, confetti, glassmorphism, tinted dark cards on white.
@@ -60,6 +61,7 @@ Ledger for the choices that a reader would otherwise have to take on trust:
 | Score deltas are monochrome, sign + glyph   | anti-slop rule, no source color  | Green/red score chips are the genre's default and would be the loudest thing on the page             |
 | Card: timer top-left, action bottom-right   | Duolingo English Test timed quiz | The one timed-answer pattern with real usage evidence; reps read left-to-right, top-down             |
 | No score ring for the total                 | rejected (Promova results card)  | A ring reads as a badge; eight sub-scores need a table, and the total belongs in the same typography |
+| Sub-scores as a radar, details collapsed    | Memotron wheel, Attio collapse   | A dent in one outline finds the weak item faster than eight rows; the rows stay one click away       |
 
 ## Foundation
 
@@ -112,12 +114,18 @@ submitted textarea with a rule-grey fill and slate text, place the shared border
 `Scoring your reply` status in the body, and dim the countdown with a mono `STOPPED`
 marker; the answering state has none of those scoring markers.
 
-**Feedback.** Same column and card. The total sits alone at the top as the largest mono
-figure with `/100` in slate at body size, followed by the eight sub-scores as a
-two-column mono table grouped under their four criteria — score right-aligned so the
-digits form a line the eye can run down. Under the table: each criterion's comment as
-prose, then the model reply in a rule-bounded block with the mono label `MODEL REPLY`.
-The next-question action is the charcoal button in the footer, in the same position Send
+**Feedback.** Same column and card, built to be looked at before it is read. The total
+sits alone at the top as the largest mono figure with `/100` in slate at body size, the
+delta and the `FORCED` tag beside it. Under a hairline rule, the eight sub-scores are
+one monochrome radar (the score radar recipe in `references/tokens.md`): one axis per
+rubric item in rubric order, so each criterion's two items sit side by side and share
+its mono micro-label, and a dent shows the weak item at a glance. The radar carries a
+text equivalent naming every sub-score. Below it, one native disclosure per criterion,
+collapsed by default: the closed row shows the criterion and its `/ 10` subtotal, and
+opening it shows its two sub-scores as the mono score table — score right-aligned so the
+digits form a line the eye can run down — followed by the criterion's comment as prose.
+Then the model reply in a rule-bounded block with the mono label `MODEL REPLY`. The
+next-question action is the charcoal button in the footer, in the same position Send
 occupied, so the rep loop never moves the pointer.
 
 **Dashboard.** The recent runs as one mono table, newest first, one row per rep, with
