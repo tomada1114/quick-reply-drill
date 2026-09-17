@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createRecordsStore,
+  RecordsEnvelopeConflictError,
   type RecordStorage,
 } from "../src/components/lib/records-store";
 import { MAX_RECORDS, RECORDS_STORAGE_VERSION } from "../src/core/records";
@@ -159,7 +160,7 @@ describe("createRecordsStore", () => {
         JSON.stringify({ version: RECORDS_STORAGE_VERSION + 1, records: [] }),
       ],
       [
-        "an envelope whose records array holds an invalid record",
+        "an envelope whose records array holds only an invalid record",
         JSON.stringify({
           version: RECORDS_STORAGE_VERSION,
           records: [{ bogus: true }],
@@ -195,20 +196,74 @@ describe("createRecordsStore", () => {
       },
     );
 
-    it("overwrites garbage with a fresh, valid envelope on the next append", () => {
+    it("returns an empty list when storage.getItem throws", () => {
       const storage = new MapStorage();
-      storage.setItem("test.records", "{not json");
+      storage.setItem(
+        "test.records",
+        JSON.stringify({
+          version: RECORDS_STORAGE_VERSION,
+          records: [makeRecord("a")],
+        }),
+      );
+      vi.spyOn(storage, "getItem").mockImplementation(() => {
+        throw new DOMException("blocked", "SecurityError");
+      });
       const store = createRecordsStore(storage, "test.records");
-      const record = makeRecord("a");
 
-      store.append(record);
+      expect(store.list()).toStrictEqual([]);
+    });
 
-      expect(store.list()).toStrictEqual([record]);
+    it("salvages the individually valid records in a same-version envelope and keeps them on append", () => {
+      const storage = new MapStorage();
+      const valid = makeRecord("valid");
+      storage.setItem(
+        "test.records",
+        JSON.stringify({
+          version: RECORDS_STORAGE_VERSION,
+          records: [valid, { bogus: true }],
+        }),
+      );
+      const store = createRecordsStore(storage, "test.records");
+
+      expect(store.list()).toStrictEqual([valid]);
+
+      const appended = makeRecord("appended");
+      store.append(appended);
+
+      expect(store.list()).toStrictEqual([appended, valid]);
       const written: unknown = JSON.parse(storage.getItem("test.records") ?? "null");
       expect(written).toStrictEqual({
         version: RECORDS_STORAGE_VERSION,
-        records: [record],
+        records: [appended, valid],
       });
+    });
+
+    it.each([
+      ["a value that is not JSON at all", "{not json"],
+      ["JSON that is not an object", "42"],
+      ["an envelope missing version", JSON.stringify({ records: [] })],
+      [
+        "an envelope with a future version",
+        JSON.stringify({ version: RECORDS_STORAGE_VERSION + 1, records: [] }),
+      ],
+    ])("append() refuses to overwrite %s", (_description, raw) => {
+      const storage = new MapStorage();
+      storage.setItem("test.records", raw);
+      const store = createRecordsStore(storage, "test.records");
+
+      let caught: unknown;
+      try {
+        store.append(makeRecord("a"));
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught).toBeInstanceOf(RecordsEnvelopeConflictError);
+      expect((caught as RecordsEnvelopeConflictError).code).toBe(
+        "ERR_RECORDS_ENVELOPE_CONFLICT",
+      );
+      // The raw value must be left exactly as it was — append() never wrote.
+      expect(storage.getItem("test.records")).toBe(raw);
     });
   });
 });

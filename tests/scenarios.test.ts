@@ -10,15 +10,19 @@ import {
 } from "../src/core/scenarios";
 
 const RELATIONSHIPS = [
-  "close",
+  "justMet",
   "familiar",
-  "distant",
+  "close",
 ] as const satisfies readonly Interlocutor["relationship"][];
 const REGISTERS = [
   "casual",
   "neutral",
-  "formal",
 ] as const satisfies readonly Setting["register"][];
+
+/** Interlocutor ids that named a work relationship in the template's tables. */
+const WORK_INTERLOCUTOR_IDS = ["manager", "client"];
+/** Setting ids that named a work or support register in the template's tables. */
+const WORK_SETTING_IDS = ["workThread", "marketplaceChat", "supportChat"];
 
 /**
  * A deterministic mulberry32 generator, used only so `drawSeeds`'s injected
@@ -57,6 +61,12 @@ describe("INTERLOCUTORS", () => {
       true,
     );
   });
+
+  it("names no work-register interlocutor from the template's tables", () => {
+    for (const id of WORK_INTERLOCUTOR_IDS) {
+      expect(INTERLOCUTORS.some((entry) => entry.id === id)).toBe(false);
+    }
+  });
 });
 
 describe("SETTINGS", () => {
@@ -67,6 +77,18 @@ describe("SETTINGS", () => {
 
   it.each(REGISTERS)("includes a %s register", (register) => {
     expect(SETTINGS.some((entry) => entry.register === register)).toBe(true);
+  });
+
+  it("has no formal register left in the table", () => {
+    expect(SETTINGS.some((entry) => (entry.register as string) === "formal")).toBe(
+      false,
+    );
+  });
+
+  it("names no work or support setting from the template's tables", () => {
+    for (const id of WORK_SETTING_IDS) {
+      expect(SETTINGS.some((entry) => entry.id === id)).toBe(false);
+    }
   });
 });
 

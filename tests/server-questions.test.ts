@@ -20,8 +20,8 @@ const ENDPOINT = "http://localhost/api/questions";
 /** Three seeds, drawn by hand so the order this suite asserts on is fixed. */
 const SEEDS: readonly ScenarioSeed[] = [
   {
-    interlocutor: { id: "coworker", label: "a coworker", relationship: "familiar" },
-    setting: { id: "workChat", label: "a work chat", register: "neutral" },
+    interlocutor: { id: "neighbour", label: "a neighbour", relationship: "familiar" },
+    setting: { id: "directMessage", label: "a direct message", register: "neutral" },
     topic: { id: "scheduling", label: "a schedule change" },
   },
   {
@@ -30,9 +30,17 @@ const SEEDS: readonly ScenarioSeed[] = [
     topic: { id: "weekendPlans", label: "weekend plans" },
   },
   {
-    interlocutor: { id: "client", label: "a client", relationship: "distant" },
-    setting: { id: "email", label: "an email thread", register: "formal" },
-    topic: { id: "deadline", label: "a deadline slipping" },
+    interlocutor: {
+      id: "partyStranger",
+      label: "someone you just met at a party",
+      relationship: "justMet",
+    },
+    setting: {
+      id: "firstContactChat",
+      label: "a first chat after exchanging contacts",
+      register: "neutral",
+    },
+    topic: { id: "hometown", label: "where you're from" },
   },
 ];
 
@@ -40,16 +48,16 @@ const SEEDS: readonly ScenarioSeed[] = [
 const GENERATED = {
   questions: [
     {
-      question: "Can we move tomorrow's stand-up?",
-      scenarioLine: "A coworker, at work",
+      question: "Can we move our coffee to tomorrow?",
+      scenarioLine: "A neighbour, in a direct message",
     },
     {
       question: "Still on for Saturday?",
       scenarioLine: "A close friend, in a group chat",
     },
     {
-      question: "Could you confirm the new delivery date?",
-      scenarioLine: "A client, in an email thread",
+      question: "Just landed here myself last year, whereabouts are you from?",
+      scenarioLine: "Someone you just met at a party, after exchanging contacts",
     },
   ],
 };
@@ -206,8 +214,8 @@ describe("POST /api/questions", () => {
     expect(seen).toHaveLength(1);
     expect(seen[0]?.instructions).toContain("practice prompts");
     // The seeds reach the model as the per-request turn, never as instructions.
-    expect(seen[0]?.prompt).toContain("a coworker");
-    expect(seen[0]?.instructions).not.toContain("a coworker");
+    expect(seen[0]?.prompt).toContain("a neighbour");
+    expect(seen[0]?.instructions).not.toContain("a neighbour");
   });
 
   it("forwards the caller's cancellation to the port", async () => {
