@@ -12,9 +12,17 @@ import {
 /** Three hand-written seeds, so the prompt's wording is pinned to fixed labels. */
 const SEEDS: readonly ScenarioSeed[] = [
   {
-    interlocutor: { id: "manager", label: "your manager", relationship: "distant" },
-    setting: { id: "workThread", label: "a work chat thread", register: "formal" },
-    topic: { id: "deadlineSlipping", label: "a deadline slipping" },
+    interlocutor: {
+      id: "hobbyGroupFriend",
+      label: "a friend from a hobby group",
+      relationship: "familiar",
+    },
+    setting: {
+      id: "directMessage",
+      label: "a one-on-one direct message",
+      register: "neutral",
+    },
+    topic: { id: "trip", label: "a trip" },
   },
   {
     interlocutor: { id: "closeFriend", label: "a close friend", relationship: "close" },
@@ -26,13 +34,17 @@ const SEEDS: readonly ScenarioSeed[] = [
     topic: { id: "weekendPlans", label: "weekend plans" },
   },
   {
-    interlocutor: { id: "client", label: "a client", relationship: "distant" },
-    setting: {
-      id: "supportChat",
-      label: "a customer support chat",
-      register: "formal",
+    interlocutor: {
+      id: "partyStranger",
+      label: "someone you just met at a party",
+      relationship: "justMet",
     },
-    topic: { id: "brokenThing", label: "a broken thing" },
+    setting: {
+      id: "firstContactChat",
+      label: "a first chat after exchanging contacts",
+      register: "neutral",
+    },
+    topic: { id: "hometown", label: "where you're from" },
   },
 ];
 
@@ -41,7 +53,7 @@ function questions(count: number): QuestionsOutput {
   return {
     questions: Array.from({ length: count }, (_unused, index) => ({
       question: `Question ${String(index + 1)}?`,
-      scenarioLine: "Your manager, in a work chat",
+      scenarioLine: "A friend from a hobby group, in a direct message",
     })),
   };
 }
@@ -103,9 +115,9 @@ describe("buildQuestionsRequest", () => {
       [
         "Write 3 questions, one for each numbered situation below, in this order:",
         "",
-        "1. your manager, in a work chat thread, about a deadline slipping",
+        "1. a friend from a hobby group, in a one-on-one direct message, about a trip",
         "2. a close friend, in a group chat with friends, about weekend plans",
-        "3. a client, in a customer support chat, about a broken thing",
+        "3. someone you just met at a party, in a first chat after exchanging contacts, about where you're from",
       ].join("\n"),
     );
   });
@@ -121,7 +133,15 @@ describe("buildQuestionsRequest", () => {
     expect(request.instructions).toContain("no quotation marks");
     expect(request.instructions).toContain("Match the register");
     expect(request.instructions).toContain("scenarioLine");
-    expect(request.instructions).toContain("Your manager, in a work chat");
+    expect(request.instructions).toContain(
+      "A friend from a hobby group, in a group chat",
+    );
+  });
+
+  it("names both opener kinds in the instructions", () => {
+    expect(request.instructions).toContain("a question the reader can answer");
+    expect(request.instructions).toContain("a short share");
+    expect(request.instructions).toContain("roughly half");
   });
 
   it("keeps the rules out of the per-request prompt", () => {

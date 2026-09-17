@@ -3,24 +3,31 @@
  *
  * @remarks
  * Every label is the exact words a prompt will see, written to read
- * naturally inside a sentence such as "your manager messages you in a group
- * chat with friends about a deadline slipping". Kept separate from
+ * naturally inside a sentence such as "a friend from a hobby group messages
+ * you in a group chat about weekend plans". Kept separate from
  * `scenarios.ts` so the draw logic stays under this repository's per-file
  * line budget — the same split `rubric.ts`/`rubric-descriptors.ts` uses.
+ *
+ * This set of tables drills one goal: keeping a casual conversation going —
+ * getting to know someone, small talk with a friend, chat as rehearsal for a
+ * face-to-face conversation. Work register (a manager, a client, a support
+ * thread) is out of scope for it. A future user-selectable goal — work
+ * register, precise answering, and so on — belongs in a separate table set
+ * paired with its own rubric, not in extra rows appended to this one.
  */
 
 /** Someone the practising user is chatting with. */
 export interface Interlocutor {
   readonly id: string;
   readonly label: string;
-  readonly relationship: "close" | "familiar" | "distant";
+  readonly relationship: "justMet" | "familiar" | "close";
 }
 
 /** Where the chat is happening. */
 export interface Setting {
   readonly id: string;
   readonly label: string;
-  readonly register: "casual" | "neutral" | "formal";
+  readonly register: "casual" | "neutral";
 }
 
 /** What the chat is about. */
@@ -38,22 +45,34 @@ export interface Topic {
  * closeness spectrum.
  */
 export const INTERLOCUTORS = [
-  { id: "closeFriend", label: "a close friend", relationship: "close" },
+  {
+    id: "partyStranger",
+    label: "someone you just met at a party",
+    relationship: "justMet",
+  },
+  {
+    id: "friendOfAFriend",
+    label: "a friend of a friend",
+    relationship: "justMet",
+  },
+  {
+    id: "languageExchangePartner",
+    label: "a language-exchange partner",
+    relationship: "justMet",
+  },
   {
     id: "hobbyGroupFriend",
     label: "a friend from a hobby group",
     relationship: "familiar",
   },
-  { id: "coworker", label: "a coworker", relationship: "familiar" },
-  { id: "manager", label: "your manager", relationship: "distant" },
-  { id: "client", label: "a client", relationship: "distant" },
   { id: "neighbour", label: "a neighbour", relationship: "familiar" },
-  { id: "familyMember", label: "a family member", relationship: "close" },
   {
-    id: "onlineStranger",
-    label: "a stranger in an online community",
-    relationship: "distant",
+    id: "newCoworker",
+    label: "a new coworker, over lunch",
+    relationship: "familiar",
   },
+  { id: "closeFriend", label: "a close friend", relationship: "close" },
+  { id: "familyMember", label: "a family member", relationship: "close" },
   { id: "roommate", label: "a roommate", relationship: "close" },
 ] as const satisfies readonly Interlocutor[];
 
@@ -61,8 +80,8 @@ export const INTERLOCUTORS = [
  * Where a scenario is set.
  *
  * @remarks
- * At least six, spanning all three {@link Setting.register} values so a
- * batch of scenarios is not drawn from only one tone.
+ * At least six, spanning both {@link Setting.register} values so a batch of
+ * scenarios is not drawn from only one tone.
  */
 export const SETTINGS = [
   { id: "groupChat", label: "a group chat with friends", register: "casual" },
@@ -71,22 +90,30 @@ export const SETTINGS = [
     label: "a one-on-one direct message",
     register: "neutral",
   },
-  { id: "workThread", label: "a work chat thread", register: "formal" },
   {
     id: "publicReply",
     label: "a reply under a public post",
     register: "casual",
   },
   {
-    id: "marketplaceChat",
-    label: "a marketplace chat with a seller",
-    register: "neutral",
-  },
-  { id: "supportChat", label: "a customer support chat", register: "formal" },
-  {
     id: "familyThread",
     label: "a text message thread with family",
     register: "casual",
+  },
+  {
+    id: "firstContactChat",
+    label: "a first chat after exchanging contacts",
+    register: "neutral",
+  },
+  {
+    id: "hobbyGroupChat",
+    label: "a hobby group's chat",
+    register: "casual",
+  },
+  {
+    id: "morningAfterMessage",
+    label: "a message the morning after meeting",
+    register: "neutral",
   },
 ] as const satisfies readonly Setting[];
 
@@ -99,7 +126,6 @@ export const SETTINGS = [
  */
 export const TOPICS = [
   { id: "weekendPlans", label: "weekend plans" },
-  { id: "deadlineSlipping", label: "a deadline slipping" },
   { id: "lunchChoice", label: "a lunch choice" },
   { id: "trip", label: "a trip" },
   { id: "brokenThing", label: "a broken thing" },
@@ -111,14 +137,19 @@ export const TOPICS = [
   { id: "birthday", label: "a birthday" },
   { id: "pet", label: "a pet" },
   { id: "delayedReply", label: "a delayed reply" },
-  { id: "workMistake", label: "a mistake at work" },
   { id: "giftIdea", label: "a gift idea" },
   { id: "planChange", label: "a change of plans" },
   { id: "nightOut", label: "a night out" },
   { id: "healthConcern", label: "a health concern" },
   { id: "movingDay", label: "a moving day" },
   { id: "lostItem", label: "a lost item" },
-  { id: "groupProject", label: "a group project" },
-  { id: "subscriptionRenewal", label: "a subscription renewal" },
   { id: "noiseComplaint", label: "a noise complaint" },
+  { id: "hometown", label: "where you're from" },
+  { id: "occupation", label: "what you do" },
+  { id: "food", label: "a favourite food" },
+  { id: "music", label: "music you like" },
+  { id: "film", label: "a film you watched" },
+  { id: "sport", label: "a sport you follow" },
+  { id: "learningLanguage", label: "learning a language" },
+  { id: "sharedPlace", label: "a place you both know" },
 ] as const satisfies readonly Topic[];

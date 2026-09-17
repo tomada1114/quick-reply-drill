@@ -13,6 +13,9 @@ one comment per criterion, and a corrected version of what you wrote — before 
 the next question. Every finished rep is saved to the browser's own storage, and the
 dashboard reads that history back as a table of recent runs, a sparkline of the total,
 and (on request) an AI-written paragraph about the trend across your newest attempts.
+Every question is drawn from a casual small-talk scenario — getting to know someone or
+keeping a conversation going with a friend, questions and share-type openers alike —
+rather than a work or support register.
 
 It is a Next.js application on the App Router: a page tree, three JSON endpoints, and
 every language-model call kept behind an interface rather than made directly. ESM-only

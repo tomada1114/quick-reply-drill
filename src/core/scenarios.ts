@@ -4,12 +4,12 @@
  * @remarks
  * A question is not authored by hand: it is an app-side combination of who is
  * asking, where, and about what, handed to the model as the seed for one
- * generated question. `INTERLOCUTORS` × `SETTINGS` covers casual, neutral and
- * formal registers against close, familiar and distant relationships, which
- * is what spreads the rubric's "fit for the situation" criterion across reps
- * rather than letting every rep land on the same register. The tables
- * themselves live in `./scenario-tables` and are re-exported here so this
- * file stays the one surface a caller imports.
+ * generated question. `INTERLOCUTORS` × `SETTINGS` covers casual and neutral
+ * registers against justMet, familiar and close relationships, which is what
+ * spreads the rubric's "fit for the situation" criterion across reps rather
+ * than letting every rep land on the same register. The tables themselves
+ * live in `./scenario-tables` and are re-exported here so this file stays the
+ * one surface a caller imports.
  */
 export {
   INTERLOCUTORS,
