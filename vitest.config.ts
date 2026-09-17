@@ -185,19 +185,31 @@ export default defineConfig({
       // their own coverage.
       thresholds: {
         // The floor covers the zones whose code is this repository's own
-        // logic. `src/app/**` and `src/components/**` are deliberately absent:
-        // they are Next.js entry points and rendered markup, and a floor they
-        // cannot meet would only teach the next author to move the number.
-        // What exercises them instead is `tests/server-smoke.test.ts`, which
-        // serves the built application and asks it for a page over HTTP.
-        // Nothing of that shows up here: coverage stops at the process
-        // boundary, so the v8 provider reports these files at whatever the
+        // logic. `src/app/**` is deliberately absent: its files are Next.js
+        // entry points, exercised by `tests/server-smoke.test.ts`, which
+        // serves the built application and asks it for a page over HTTP,
+        // rather than by a unit test. Coverage stops at the process
+        // boundary, so the v8 provider reports those files at whatever the
         // in-process tests reach and no number below moves when the smoke
         // suite passes. They stay inside `include` above, so they still
         // report as a percentage — they simply have no floor to trip. This is
         // a narrower threshold glob, not a `coverage.exclude` entry, which
         // AGENTS.md forbids by name.
         "src/{core,ai,server}/**": {
+          lines: 80,
+          functions: 80,
+          statements: 80,
+          branches: 80,
+        },
+        // `src/components/**` mixes rendered markup with plain logic. The
+        // `.tsx` files are the rendered markup — same reasoning as
+        // `src/app/**` above, so this glob deliberately covers only `.ts`.
+        // Measured baseline at the time this floor was added: 97.85%
+        // statements, 83.72% branches, 100% functions, 97.82% lines — all
+        // above the `src/{core,ai,server}/**` floor already in force, so this
+        // glob reuses those same values rather than a separately measured,
+        // looser set.
+        "src/components/**/*.ts": {
           lines: 80,
           functions: 80,
           statements: 80,

@@ -116,15 +116,21 @@ question.
 
 - **The `src/` zones** named in `coverage.thresholds` carry the baseline floor for this
   repository's own logic. That glob is deliberately narrower than `coverage.include`:
-  `src/app/**` and `src/components/**` carry **no floor at all**. They are framework
-  entry points and rendered markup, exercised by a component render or a build rather
-  than by a unit test, and a floor they cannot meet would only teach the next author to
-  move the number. They stay inside `coverage.include`, so an untested file there still
-  reports as a percentage — it simply has no floor to trip. That distinction is the
-  whole point: a narrower _threshold_ glob keeps the number visible, while a
+  `src/app/**` carries **no floor at all**. It is Next.js entry points, exercised by a
+  build rather than by a unit test, and a floor it cannot meet would only teach the next
+  author to move the number. It stays inside `coverage.include`, so an untested file
+  there still reports as a percentage — it simply has no floor to trip. That distinction
+  is the whole point: a narrower _threshold_ glob keeps the number visible, while a
   `coverage.exclude` entry would hide it, which is what AGENTS.md's "never weaken a
   gate" forbids by name. Widening or narrowing the threshold glob is a decision to argue
   for in a PR.
+- **`src/components/**` splits by extension.** Its `.tsx` files are rendered markup, the
+  same reasoning as `src/app/**` above, so they carry no floor either. Its `.ts` files
+  are plain logic — client-side state machines, API clients, formatters — with no
+  rendering step to hide behind, so `src/components/**/*.ts` carries the same baseline
+  floor as `src/{core,ai,server}/**`. A new file under `src/components/` gets a DOM- or
+  build-shaped exemption only by being a `.tsx` component; a `.ts` module there is held
+  to the same floor as everywhere else.
 - **`scripts/**`** was never measured before it was added to `coverage.include`, so its
   floor is the last measured coverage rounded down to a clean value, not a guessed
   target — it has been raised as coverage grew (see the dated comments in
