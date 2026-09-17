@@ -124,9 +124,9 @@ Below 720px: no border, no shadow, no radius — the card becomes the page.
 the only separator; do not reach for a background change.
 
 **Countdown.** Mono 600 at `--text-figure`, ink, tabular numerals, formatted `0:21`.
-Under ten seconds: color becomes status, and the card's top rule goes to 2px in status.
-No pulse, no ring, no bar. At zero the figure reads `0:00` and a micro-label `TIME UP`
-in status sits beside it.
+Under ten seconds: color becomes status, the figure moves to 700, and the card's top
+rule goes to 2px in status. No pulse, no ring, no bar. At zero the figure reads `0:00`
+and a micro-label `TIME UP` in status sits beside it.
 
 **Question.** Mono 400 at `--text-question`, ink, `text-wrap: balance`, max 60
 characters per line. The scenario line above it is caption-size Rubik in slate, sentence
