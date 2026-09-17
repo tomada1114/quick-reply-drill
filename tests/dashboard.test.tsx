@@ -116,6 +116,19 @@ describe("Dashboard", () => {
     expect(await screen.findByText(/No reps yet\./)).toBeInTheDocument();
   });
 
+  it("shows the empty state when the default storage getter throws", async () => {
+    // No `storage` prop, so the component resolves `window.localStorage`
+    // itself — the getter throws `SecurityError` when site data is blocked,
+    // before any `RecordStorage` method is ever called.
+    vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+
+    render(<Dashboard />);
+
+    expect(await screen.findByText(/No reps yet\./)).toBeInTheDocument();
+  });
+
   it("lists the recent runs newest first, regardless of the order they were stored in", async () => {
     const storage = new MapStorage();
     // Stored oldest-first — the opposite of what the dashboard must display.
