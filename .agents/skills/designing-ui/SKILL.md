@@ -150,6 +150,10 @@ a measure of 65-75 characters, with the button that requests it directly above.
   ellipsis. The ellipsis may pulse while a request is in flight;
   `prefers-reduced-motion` leaves it static. Use this treatment for every request wait,
   not a spinner, progress bar, or new hue.
+- A hand-written caption `<p>` silently inherits `globals.css`'s base `<p>` bottom
+  margin, which only shows up as a bug beside a button in a flex row (issue #57); render
+  a caption through `src/components/shared/caption.tsx`'s `Caption` instead, which
+  zeroes that margin by default.
 - Focus is visible on every control: a 2px charcoal ring offset 2px, never removed to
   tidy the textarea. The textarea is the first focused element when a rep starts, with
   no click required.

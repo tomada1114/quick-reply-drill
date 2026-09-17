@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import { cn } from "@/components/lib/utils";
+import { Caption } from "@/components/shared/caption";
 import { DrillCard, DrillDivider } from "@/components/shared/card";
 import { BODY_TEXT_CLASS_NAME, describeApiError } from "@/components/shared/format";
 import { LoadingIndicator } from "@/components/shared/loading-indicator";
@@ -123,7 +124,7 @@ export function AnsweringCard({
             <span className="font-mono text-micro uppercase text-slate">STOPPED</span>
           ) : null}
         </div>
-        <p className="font-sans text-caption text-slate">{question.scenarioLine}</p>
+        <Caption>{question.scenarioLine}</Caption>
       </header>
       <DrillDivider />
       <div className="flex flex-col gap-4">
@@ -165,12 +166,7 @@ export function AnsweringCard({
         )}
       >
         {!submitting && footerHint ? (
-          <p
-            id={ANSWERING_SHORTCUT_HINT_ID}
-            className="mb-0 font-sans text-caption text-slate"
-          >
-            {footerHint}
-          </p>
+          <Caption id={ANSWERING_SHORTCUT_HINT_ID}>{footerHint}</Caption>
         ) : null}
         <Button
           onClick={hasError ? onRetry : onSend}
