@@ -1,5 +1,22 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/**
+ * `tailwind-merge` taught this theme's `--text-*` font-size tokens.
+ *
+ * @remarks
+ * Its default config does not know them, so it files `text-figure` in the
+ * same group as a color such as `text-ink` and drops whichever came first —
+ * the size, in every caption and countdown written `size color`. Keep this
+ * list in step with the `--text-*` tokens in `src/app/globals.css`.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ["micro", "caption", "body", "body-lg", "question", "figure"],
+    },
+  },
+});
 
 /**
  * Join class names and let the last Tailwind utility of a group win.
