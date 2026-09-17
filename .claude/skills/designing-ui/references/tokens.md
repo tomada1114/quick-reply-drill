@@ -5,37 +5,42 @@ style reference; the source column is what stops a later edit from inventing a h
 
 ## Colors
 
-| Token            | Value     | Source             | Role — and only this role                                            |
-| ---------------- | --------- | ------------------ | -------------------------------------------------------------------- |
-| `--color-paper`  | `#ffffff` | SST                | The page and the card. No tinted section backgrounds anywhere.       |
-| `--color-inset`  | `#f5f5f5` | imgs.so            | Input and textarea fill. Not a card, not a section, not a table row. |
-| `--color-rule`   | `#e8e8f2` | SST                | Every 1px border and divider. Replaces shadows.                      |
-| `--color-ink`    | `#111111` | SST                | Headings, the question, the total score, table figures.              |
-| `--color-body`   | `#403f53` | SST                | Body prose, comments, the model reply.                               |
-| `--color-slate`  | `#767682` | SST                | Labels, captions, secondary meta, `/100`.                            |
-| `--color-fog`    | `#a8a8b0` | SST                | Placeholder and disabled only. Never a label, never a score.         |
-| `--color-action` | `#1c2024` | imgs.so            | The one filled button per screen, and its white label.               |
-| `--color-status` | `#9a5421` | imgs.so beta badge | The last ten seconds and the forced-submit tag. Nothing else.        |
-| `--color-link`   | `#303055` | SST                | Inline text links only, never a button fill.                         |
+| Token            | Value     | Source                          | Role — and only this role                                            |
+| ---------------- | --------- | ------------------------------- | -------------------------------------------------------------------- |
+| `--color-paper`  | `#ffffff` | SST                             | The page and the card. No tinted section backgrounds anywhere.       |
+| `--color-inset`  | `#f5f5f5` | imgs.so                         | Input and textarea fill. Not a card, not a section, not a table row. |
+| `--color-rule`   | `#e8e8f2` | SST                             | Every 1px border and divider. Replaces shadows.                      |
+| `--color-ink`    | `#111111` | SST                             | Headings, the question, the total score, table figures.              |
+| `--color-body`   | `#403f53` | SST                             | Body prose, comments, the model reply.                               |
+| `--color-slate`  | `#767682` | SST                             | Labels, captions, secondary meta, `/100`.                            |
+| `--color-fog`    | `#a8a8b0` | SST                             | Placeholder and disabled only. Never a label, never a score.         |
+| `--color-action` | `#1c2024` | imgs.so                         | The one filled button per screen, and its white label.               |
+| `--color-status` | `#c0362c` | imgs.so badge role, red per #64 | The last ten seconds and the forced-submit tag. Nothing else.        |
+| `--color-link`   | `#303055` | SST                             | Inline text links only, never a button fill.                         |
 
 Measured against `--color-paper`: ink 18.9:1, body 10.2:1, slate 4.5:1, action 16.4:1,
-status 5.7:1, link 12.5:1, fog 2.3:1. Fog is why it is placeholder-only. White on action
-is 16.4:1. The rule color is 1.1:1 and is therefore never allowed to be the only thing
-separating two interactive regions — it separates, it does not signal.
+status 5.52:1, link 12.5:1, fog 2.3:1. Fog is why it is placeholder-only. White on
+action is 16.4:1. The rule color is 1.1:1 and is therefore never allowed to be the only
+thing separating two interactive regions — it separates, it does not signal.
 
-No success green and no error red exist in this system. A score that fell is a minus
-sign and a `▼` glyph in ink, not a red chip; a validation failure is body text under the
-field plus the field's border darkening to ink.
+`--color-status` was measured with the WCAG relative-luminance formula against
+`--color-paper` when it moved from the muted amber `#9a5421` to the clear red `#c0362c`
+in #64: `#c0362c` on `#ffffff` is 5.52:1, clearing the 4.5:1 floor with headroom.
+
+The status red is the countdown/forced-submit status signal only. There is still no
+success green, and no red for a score drop or a validation error: a score that fell is a
+minus sign and a `▼` glyph in ink, not a red chip; a validation failure is body text
+under the field plus the field's border darkening to ink.
 
 ## Typography
 
 Two families, loaded through `next/font/google`, with `display: "swap"` and the subset
 this app actually needs.
 
-| Token         | Family        | Weights  | Carries                                                                |
-| ------------- | ------------- | -------- | ---------------------------------------------------------------------- |
-| `--font-sans` | Rubik         | 400, 500 | Prose, comments, labels, buttons, the dashboard paragraph.             |
-| `--font-mono` | IBM Plex Mono | 400, 600 | The question, the countdown, all figures, table headers, micro-labels. |
+| Token         | Family        | Weights       | Carries                                                                                                                 |
+| ------------- | ------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `--font-sans` | Rubik         | 400, 500      | Prose, comments, labels, buttons, the dashboard paragraph.                                                              |
+| `--font-mono` | IBM Plex Mono | 400, 600, 700 | The question, the countdown, all figures, table headers, micro-labels. 700 is the urgent/expired countdown weight only. |
 
 Scale — sizes are fixed tokens, not ad-hoc utilities:
 
@@ -83,7 +88,7 @@ and hand-written CSS that references it with `var()` resolves to nothing.
   --color-slate: #767682;
   --color-fog: #a8a8b0;
   --color-action: #1c2024;
-  --color-status: #9a5421;
+  --color-status: #c0362c;
   --color-link: #303055;
 
   --font-sans: var(--font-rubik), ui-sans-serif, system-ui, sans-serif;
@@ -119,9 +124,9 @@ Below 720px: no border, no shadow, no radius — the card becomes the page.
 the only separator; do not reach for a background change.
 
 **Countdown.** Mono 600 at `--text-figure`, ink, tabular numerals, formatted `0:21`.
-Under ten seconds: color becomes status, and the card's top rule goes to 2px in status.
-No pulse, no ring, no bar. At zero the figure reads `0:00` and a micro-label `TIME UP`
-in status sits beside it.
+Under ten seconds: color becomes status, the figure moves to 700, and the card's top
+rule goes to 2px in status. No pulse, no ring, no bar. At zero the figure reads `0:00`
+and a micro-label `TIME UP` in status sits beside it.
 
 **Question.** Mono 400 at `--text-question`, ink, `text-wrap: balance`, max 60
 characters per line. The scenario line above it is caption-size Rubik in slate, sentence

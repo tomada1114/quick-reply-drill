@@ -109,7 +109,8 @@ export function AnsweringCard({
         <div className="flex items-baseline gap-2">
           <span
             className={cn(
-              "font-mono font-semibold text-figure",
+              "font-mono text-figure",
+              urgent || expired ? "font-bold" : "font-semibold",
               stopped ? "text-slate" : urgent || expired ? "text-status" : "text-ink",
             )}
           >

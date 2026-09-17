@@ -26,10 +26,12 @@ const rubik = Rubik({
  * @remarks
  * Exposed as `--font-plex-mono`, which `--font-mono` resolves against. See
  * {@link rubik} for why the options are pinned rather than left at a default.
+ * 700 is loaded for the countdown's urgent/expired weight so that state
+ * renders as an actual heavier cut rather than a synthetic browser-faked bold.
  */
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["400", "600"],
+  weight: ["400", "600", "700"],
   display: "swap",
   variable: "--font-plex-mono",
 });
