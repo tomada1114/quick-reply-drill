@@ -145,15 +145,18 @@ describe("Dashboard", () => {
     expect(rows[2]).toHaveTextContent("2026-09-10");
   });
 
-  it("uses CON for the conversation criterion column", async () => {
+  it("heads one column per rubric item, in rubric order", async () => {
     const storage = new MapStorage();
     seed(storage, [makeRecord()]);
 
     render(<Dashboard storage={storage} />);
     await screen.findAllByRole("row");
 
-    expect(screen.getByRole("columnheader", { name: "CON" })).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "CLA" })).not.toBeInTheDocument();
+    // One column per sub-score, not per criterion: a weak item has to be
+    // findable as its own stripe down the heat table.
+    expect(screen.getAllByRole("columnheader").map((head) => head.textContent)).toEqual(
+      ["REP", "RESP", "KEEP", "GRAM", "SPELL", "WORD", "COLL", "TONE", "FORM", "TOTAL"],
+    );
   });
 
   it("hides the sparkline with a single record", async () => {

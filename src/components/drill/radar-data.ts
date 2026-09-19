@@ -8,6 +8,15 @@ export interface RadarAxis {
   /** The item's short label, drawn on the axis. */
   readonly label: string;
   readonly score: number;
+  /**
+   * The top of the scale, drawn as the radar's one solid outer ring.
+   *
+   * @remarks
+   * Constant by definition — a rubric item is always out of 5. It is a
+   * series only because `PolarGrid` cannot style one of its rings
+   * differently from the rest; see `score-radar.tsx`.
+   */
+  readonly max: 5;
 }
 
 // The rubric's own labels run to six words ("Collocation, no translated-sounding
@@ -39,6 +48,7 @@ export function toRadarAxes(scores: Readonly<Record<ItemId, number>>): RadarAxis
       group: GROUP_LABELS[criterion.id],
       label: AXIS_LABELS[item.id],
       score: scores[item.id],
+      max: 5 as const,
     })),
   );
 }

@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 /*
- * The "Blueprint on Paper" lock's tokens, verbatim from
+ * The "Spring on Paper" lock's tokens, verbatim from
  * `.agents/skills/designing-ui/references/tokens.md` — colors, the two font
  * families (`--font-rubik`/`--font-plex-mono` are set on `<html>` by
- * `src/app/layout.tsx`), radii, the one shadow, and the type scale. There is
+ * `src/app/layout.tsx`), radii, the card ring, and the type scale. There is
  * no `.dark` block: the lock rejects a dark theme outright.
  *
  * `static` (rather than Tailwind's default, usage-tracked `@theme`) is what
@@ -16,23 +16,38 @@
  */
 @theme static {
   --color-paper: #ffffff;
-  --color-inset: #f5f5f5;
-  --color-rule: #e8e8f2;
-  --color-ink: #111111;
-  --color-body: #403f53;
-  --color-slate: #767682;
-  --color-fog: #a8a8b0;
-  --color-action: #1c2024;
+  --color-ground: #ebf4f2;
+  --color-inset: #ebf4f2;
+  --color-tint-strong: #dcece7;
+  --color-rule: #e2ebe6;
+  --color-ink: #022c22;
+  --color-body: #1f3d34;
+  --color-slate: #5c6d65;
+  --color-fog: #a3b1aa;
+  --color-action: #00bc7d;
+  --color-action-hover: #00a56e;
+  --color-on-action: #022c22;
+  --color-link: #007a55;
   --color-status: #c0362c;
-  --color-link: #303055;
+
+  --color-high: #3b82e0;
+  --color-high-ink: #1a5fb4;
+  --color-high-tint: #e0ebf8;
+  --color-mid: #f5a524;
+  --color-mid-ink: #8a5208;
+  --color-mid-tint: #fdefd8;
+  --color-low: #d6408f;
+  --color-low-ink: #ad1f6b;
+  --color-low-tint: #f6e0ec;
 
   --font-sans: var(--font-rubik), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
-  --radius-control: 4px;
-  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-card: 16px;
+  --radius-button: 9999px;
 
-  --shadow-card: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-card: 0 0 0 1px #e2ebe6;
 
   --text-micro: 11px;
   --text-micro--line-height: 1;
@@ -65,10 +80,19 @@
  * screen's own utility classes still win over it.
  */
 @layer base {
+  /* The page is paper at phone width, where the card dissolves into it, and
+   * the green ground from 720px up, where the card reads as a sheet laid on a
+   * desk. The breakpoint is the same 720px the column and the card use. */
   body {
     background-color: var(--color-paper);
     color: var(--color-body);
     font-family: var(--font-sans);
+  }
+
+  @media (min-width: 720px) {
+    body {
+      background-color: var(--color-ground);
+    }
   }
 
   h1,

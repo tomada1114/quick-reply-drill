@@ -142,10 +142,12 @@ export function AnsweringCard({
           aria-label="Your reply"
           aria-describedby={footerHint ? ANSWERING_SHORTCUT_HINT_ID : undefined}
           aria-keyshortcuts={footerHint ? shortcutKey : undefined}
-          className={stopped ? "disabled:bg-rule disabled:text-slate" : undefined}
+          className={
+            stopped ? "disabled:bg-tint-strong disabled:text-slate" : undefined
+          }
         />
         {submitting ? (
-          <div className="flex items-center border border-rule p-3">
+          <div className="flex items-center rounded-control border border-rule p-3">
             <LoadingIndicator label="Scoring your reply" />
           </div>
         ) : null}

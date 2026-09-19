@@ -57,7 +57,7 @@ export function Drill({ storage }: DrillProps): ReactElement {
           />
         ) : null}
       </div>
-      <Link href="/dashboard" className="font-sans text-caption">
+      <Link href="/dashboard" className="px-4 font-sans text-caption min-[720px]:px-0">
         View your dashboard
       </Link>
     </main>
