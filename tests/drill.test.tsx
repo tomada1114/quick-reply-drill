@@ -291,7 +291,13 @@ describe("Drill", () => {
     expect(countdown).toHaveClass("text-figure", "text-status");
     expect(countdown).toHaveClass("font-bold");
     expect(countdown).not.toHaveClass("font-semibold");
-    expect(countdown.closest(".border-t-status")).not.toBeNull();
+    // The card's own 3px top bar, the second signal the urgent state carries
+    // so it survives a colorblind reader and a grayscale screenshot. It is an
+    // inset shadow rather than a border, so the card's box does not grow by
+    // 3px the moment the clock turns red.
+    expect(
+      countdown.closest("[class*='inset_0_3px_0_var(--color-status)']"),
+    ).not.toBeNull();
   });
 
   it("shows a pointer cursor on an enabled Send control", async () => {

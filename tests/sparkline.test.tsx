@@ -65,19 +65,46 @@ describe("Sparkline", () => {
     );
 
     const svg = screen.getByRole("img", { name: "Total score trend" });
-    const path = svg.querySelector("path");
-    expect(path).not.toBeNull();
-    // One "move to" or "line to" command per record.
-    expect(path?.getAttribute("d")?.match(/[ML]/g)).toHaveLength(3);
+    // The stroked line is the second path: the first closes the same shape
+    // down to the baseline to carry the area fill.
+    const paths = svg.querySelectorAll("path");
+    expect(paths).toHaveLength(2);
+    // One "move to" or "line to" command per record, plus the two baseline
+    // corners the filled path adds.
+    expect(paths[0]?.getAttribute("d")?.match(/[ML]/g)).toHaveLength(5);
+    expect(paths[1]?.getAttribute("d")?.match(/[ML]/g)).toHaveLength(3);
 
-    // viewBox is 240x40 with a 4px inset on every side, and the total is
-    // scaled against a fixed 0-100 domain: the third (newest, total 100)
-    // point sits at the right edge, at the very top.
+    // viewBox is 480x110: an 8px left inset, a 30px right gutter for the
+    // gridline labels, and 10px above and below. The total is scaled against
+    // a fixed 0-100 domain, so the third (newest, total 100) point sits at
+    // the right edge of the plot, at the very top.
     const dot = svg.querySelector("circle");
     expect(dot).not.toBeNull();
-    expect(dot?.getAttribute("cx")).toBe("236");
-    expect(dot?.getAttribute("cy")).toBe("4");
-    expect(dot?.getAttribute("r")).toBe("3");
+    expect(dot?.getAttribute("cx")).toBe("450");
+    expect(dot?.getAttribute("cy")).toBe("10");
+    expect(dot?.getAttribute("r")).toBe("4.5");
+  });
+
+  it("marks 50 and 100 with a labelled gridline", () => {
+    render(
+      <Sparkline
+        records={[
+          makeRecord("b", "2026-09-11T00:00:00.000Z", 4),
+          makeRecord("a", "2026-09-10T00:00:00.000Z", 3),
+        ]}
+      />,
+    );
+
+    const svg = screen.getByRole("img", { name: "Total score trend" });
+    expect(svg.querySelectorAll("line")).toHaveLength(2);
+    // The readings are HTML beside the drawing, not text inside it: text in a
+    // drawing that scales with the card would never be the token size.
+    expect(svg.querySelectorAll("text")).toHaveLength(0);
+    const readings = svg.parentElement?.querySelectorAll("span");
+    expect([...(readings ?? [])].map((node) => node.textContent)).toEqual([
+      "50",
+      "100",
+    ]);
   });
 
   it("shows nothing below two records and something at exactly two", () => {

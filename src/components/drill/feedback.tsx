@@ -5,6 +5,7 @@ import type { DrillRecord } from "@/core/records";
 import { scoreDelta, totalScore } from "@/core/scoring";
 import { Caption } from "@/components/shared/caption";
 import { DrillCard, DrillDivider } from "@/components/shared/card";
+import { DeltaChip } from "@/components/shared/score-chip";
 
 import { CriterionDetails } from "./criterion-details";
 import { ScoreRadar } from "./score-radar";
@@ -23,20 +24,9 @@ interface FeedbackProps {
   readonly saveError: unknown;
 }
 
-/** `+3 ▲` / `-2 ▼` / `±0`, mono and monochrome — never a colored chip. */
-function formatDelta(delta: number): string {
-  if (delta > 0) {
-    return `+${delta.toString()} ▲`;
-  }
-  if (delta < 0) {
-    return `${delta.toString()} ▼`;
-  }
-  return "±0";
-}
-
 /**
  * The feedback screen: the total alone at the top, the eight sub-scores as a
- * monochrome radar to look at before anything is read, each criterion's
+ * radar to look at before anything is read, each criterion's
  * sub-scores and comment in a disclosure that starts closed, the model reply
  * in its own rule-bounded block, and the one filled `Next` action in the
  * footer — the same position `Send` held on the drill card, so the rep loop
@@ -56,19 +46,17 @@ export function Feedback({
 
   return (
     <DrillCard>
-      <div className="flex items-baseline gap-3">
-        <span className="font-mono font-semibold text-figure text-ink">{total}</span>
-        <span className="font-mono text-[length:var(--text-body)] leading-[var(--text-body--line-height)] tracking-[var(--text-body--letter-spacing)] text-slate">
-          /100
-        </span>
-        {delta !== undefined ? (
-          <span className="font-mono text-[length:var(--text-body)] leading-[var(--text-body--line-height)] tracking-[var(--text-body--letter-spacing)] text-ink">
-            {formatDelta(delta)}
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <span className="flex items-baseline gap-3">
+          <span className="font-mono font-semibold text-figure text-ink">{total}</span>
+          <span className="font-mono text-[length:var(--text-body)] leading-[var(--text-body--line-height)] tracking-[var(--text-body--letter-spacing)] text-slate">
+            /100
           </span>
-        ) : null}
-        {record.forcedSubmit ? (
-          <span className="font-mono text-micro uppercase text-status">FORCED</span>
-        ) : null}
+          {record.forcedSubmit ? (
+            <span className="font-mono text-micro uppercase text-status">FORCED</span>
+          ) : null}
+        </span>
+        {delta !== undefined ? <DeltaChip delta={delta} /> : null}
       </div>
       {saveError !== undefined ? (
         <Caption>This score was not saved to your local history.</Caption>
@@ -77,9 +65,9 @@ export function Feedback({
       <ScoreRadar scores={record.scores} />
       <CriterionDetails record={record} />
       {record.modelReply !== "" ? (
-        <div className="flex flex-col gap-2 rounded-card border border-rule p-4">
-          <p className="font-mono text-micro uppercase text-slate">MODEL REPLY</p>
-          <p className="font-sans text-body-lg text-(color:--color-body)">
+        <div className="flex flex-col gap-2">
+          <p className="mb-0 font-mono text-micro uppercase text-link">MODEL REPLY</p>
+          <p className="mb-0 rounded-control bg-inset px-3.5 py-3 font-sans text-body-lg text-(color:--color-body)">
             {record.modelReply}
           </p>
         </div>

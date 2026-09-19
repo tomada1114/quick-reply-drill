@@ -15,7 +15,7 @@ function Textarea({ className, ...props }: ComponentProps<"textarea">): ReactEle
     <textarea
       data-slot="textarea"
       className={cn(
-        "flex field-sizing-content min-h-16 w-full rounded-control border border-rule bg-inset px-3.5 py-3 font-sans text-body-lg text-(color:--color-body) outline-none transition-colors placeholder:text-fog focus-visible:border-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-inset disabled:text-fog",
+        "flex field-sizing-content min-h-16 w-full rounded-control border border-transparent bg-inset px-3.5 py-3 font-sans text-body-lg text-(color:--color-body) outline-none transition-colors placeholder:text-fog focus-visible:border-link focus-visible:ring-2 focus-visible:ring-link focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-inset disabled:text-fog",
         className,
       )}
       {...props}

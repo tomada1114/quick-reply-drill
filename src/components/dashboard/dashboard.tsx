@@ -68,11 +68,14 @@ export function Dashboard({ storage }: DashboardProps): ReactElement {
   return (
     <main className="flex min-h-[70svh] flex-col items-center py-8">
       <div className="flex w-full max-w-[720px] flex-col gap-4">
-        <Link href="/" className="self-start font-sans text-caption">
+        <Link
+          href="/"
+          className="self-start px-4 font-sans text-caption min-[720px]:px-0"
+        >
           Back to the drill
         </Link>
         <DrillCard>
-          <h1 className="font-mono text-micro uppercase text-slate">DASHBOARD</h1>
+          <h1 className="mb-0 font-mono text-micro uppercase text-link">DASHBOARD</h1>
           {records === undefined ? (
             <LoadingIndicator label="Loading history" />
           ) : records.length === 0 ? (

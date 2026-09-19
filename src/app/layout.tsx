@@ -56,7 +56,11 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>): ReactElement {
   return (
     <html lang="en" className={`${rubik.variable} ${ibmPlexMono.variable}`}>
-      <body className="p-4 min-[720px]:p-8">{children}</body>
+      {/* No horizontal padding below 720px: there the card *is* the page, so
+          its own 16px padding is the gutter and the paper has to reach both
+          edges. From 720px up the page is ground, and this is the margin the
+          sheet sits in. */}
+      <body className="py-4 min-[720px]:p-8">{children}</body>
     </html>
   );
 }
